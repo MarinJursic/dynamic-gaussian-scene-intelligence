@@ -47,3 +47,6 @@ next-env.d.ts
 __pycache__/
 .pytest_cache/
 *.egg-info/
+/docs/sample-ingestion.gif
+/docs/showcase/room-walkthrough.gif
+/docs/showcase/room-walkthrough.mp4
