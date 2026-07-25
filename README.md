@@ -2,6 +2,9 @@
 
 **A browser workbench for reconstructing, streaming, comparing, and inspecting spatial captures.**
 
+[![Live preview](https://img.shields.io/badge/live-preview-2ea44f?logo=github)](https://marinjursic.github.io/dynamic-gaussian-scene-intelligence/)
+[![Preview status](https://github.com/MarinJursic/dynamic-gaussian-scene-intelligence/actions/workflows/pages.yml/badge.svg)](https://github.com/MarinJursic/dynamic-gaussian-scene-intelligence/actions/workflows/pages.yml)
+
 ![DGSI product visual](docs/scene-intelligence-card.png)
 
 DGSI is a portfolio-grade, local-first MVP spanning a TypeScript/Three.js viewer and a real Python ingestion service. It accepts **multiple images, multiple videos, or both in one batch**; extracts and balances frames across every source; inspects capture quality; creates a deterministic room-scale CPU reconstruction surrogate; and packages the result as a compact browser scene plus PLY.
