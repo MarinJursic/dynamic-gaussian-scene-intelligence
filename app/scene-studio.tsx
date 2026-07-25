@@ -47,7 +47,8 @@ type Runtime = {
   lastFrameTime: number;
 };
 
-const DEFAULT_MANIFEST = "/room-demo/manifest.json";
+const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const DEFAULT_MANIFEST = `${PUBLIC_BASE_PATH}/room-demo/manifest.json`;
 const API_BASE = process.env.NEXT_PUBLIC_DGSI_API_URL ?? "http://127.0.0.1:8016";
 
 const vertexShader = `
@@ -942,7 +943,7 @@ export function SceneStudio() {
                     {["00", "03", "06", "09"].map((frame) => (
                       <Image
                         key={frame}
-                        src={`/room-inputs/room-${frame}.png`}
+                        src={`${PUBLIC_BASE_PATH}/room-inputs/room-${frame}.png`}
                         width={120}
                         height={80}
                         unoptimized
