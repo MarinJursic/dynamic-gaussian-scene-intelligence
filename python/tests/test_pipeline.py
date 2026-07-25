@@ -46,6 +46,11 @@ def test_sample_ingestion_is_deterministic(tmp_path: Path) -> None:
     assert np.isfinite(values).all()
     assert ((values[:, 7] >= 0) & (values[:, 7] < 5)).all()
     assert ((values[:, 10] >= 0) & (values[:, 10] <= 1)).all()
+    room_points = values[: 4 * 240]
+    radial_distance = np.hypot(room_points[:, 0], room_points[:, 2])
+    assert 3.2 < float(np.median(radial_distance)) < 4.1
+    assert room_points[:, 1].min() < -1.4
+    assert room_points[:, 1].max() > 1.4
     ply_lines = (first / "scene.ply").read_text().splitlines()
     assert f"element vertex {point_count}" in ply_lines
     assert len(ply_lines[ply_lines.index("end_header") + 1 :]) == point_count

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   ChangeEvent,
   DragEvent as ReactDragEvent,
@@ -42,7 +43,7 @@ type Runtime = {
   lastFrameTime: number;
 };
 
-const DEFAULT_MANIFEST = "/demo/manifest.json";
+const DEFAULT_MANIFEST = "/room-demo/manifest.json";
 const API_BASE = process.env.NEXT_PUBLIC_DGSI_API_URL ?? "http://127.0.0.1:8016";
 
 const vertexShader = `
@@ -76,7 +77,7 @@ const vertexShader = `
     else visible = uVisible4;
     vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mvPosition;
-    gl_PointSize = clamp(aScale * uPointScale * (18.0 / max(0.4, -mvPosition.z)), 0.9, 10.0);
+    gl_PointSize = clamp(aScale * uPointScale * (22.0 / max(0.4, -mvPosition.z)), 1.1, 12.0);
     vColor = color;
     if (uSelected > -0.5 && abs(aSemantic - uSelected) > 0.4) {
       vColor *= 0.22;
@@ -99,7 +100,7 @@ const fragmentShader = `
     vec2 centered = gl_PointCoord - vec2(0.5);
     float radius = dot(centered, centered);
     if (radius > 0.25) discard;
-    float gaussian = exp(-radius * 11.0);
+    float gaussian = exp(-radius * 9.0);
     vec3 heat = mix(vec3(0.18, 0.42, 1.0), vec3(1.0, 0.14, 0.05), smoothstep(0.05, 1.0, vHeat));
     vec3 color = mix(vColor, heat, clamp(vHeat * 0.92, 0.0, 0.92)) * uExposure;
     float haze = smoothstep(7.0, 18.0, vDepth);
@@ -159,6 +160,7 @@ export function SceneStudio() {
   const [activeManifestUrl, setActiveManifestUrl] = useState(DEFAULT_MANIFEST);
   const [navigation, setNavigation] = useState<"orbit" | "walk">("orbit");
   const [dropActive, setDropActive] = useState(false);
+  const [showSourceViews, setShowSourceViews] = useState(true);
 
   const updateOrbitCamera = useCallback((runtime: Runtime) => {
     runtime.pitch = THREE.MathUtils.clamp(runtime.pitch, -1.15, 1.15);
@@ -629,6 +631,14 @@ export function SceneStudio() {
     await ingestSelection(Array.from(event.dataTransfer.files));
   };
 
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    const nextTheme = root.dataset.theme === "light" ? "dark" : "light";
+    root.dataset.theme = nextTheme;
+    root.style.colorScheme = nextTheme;
+    window.localStorage.setItem("dgsi-theme", nextTheme);
+  };
+
   const enterXr = async () => {
     type XRSystemLike = {
       isSessionSupported(mode: string): Promise<boolean>;
@@ -701,6 +711,16 @@ export function SceneStudio() {
         </div>
         <div className="top-actions">
           <span className="pipeline-pill"><i /> LOCAL · DETERMINISTIC</span>
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label="Switch color theme"
+            title="Switch between light and dark themes"
+            onClick={toggleTheme}
+          >
+            <span aria-hidden="true">◐</span>
+            <span className="theme-label">Theme</span>
+          </button>
           <button className="button secondary" onClick={() => fileRef.current?.click()} disabled={ingesting}>
             {ingesting ? "Building space…" : "Import images + videos"}
           </button>
@@ -797,6 +817,40 @@ export function SceneStudio() {
               {fps} FPS <i /> {formatPoints(visibleBudgetPoints)} SPLATS <i /> {manifest?.spatial.layout.replaceAll("-", " ") ?? "loading"}
             </div>
           </div>
+          {activeManifestUrl === DEFAULT_MANIFEST && navigation === "orbit" && (
+            <div className={`source-filmstrip ${showSourceViews ? "open" : ""}`}>
+              <button
+                type="button"
+                aria-expanded={showSourceViews}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowSourceViews((shown) => !shown);
+                }}
+              >
+                <span>INPUT VIEWS</span>
+                <b>{showSourceViews ? "Hide" : "Compare"} {showSourceViews ? "−" : "+"}</b>
+              </button>
+              {showSourceViews && (
+                <>
+                  <div className="source-thumbnails">
+                    {["00", "03", "06", "09"].map((frame) => (
+                      <Image
+                        key={frame}
+                        src={`/room-inputs/room-${frame}.png`}
+                        width={120}
+                        height={80}
+                        unoptimized
+                        alt={`Living-room source view ${frame}`}
+                      />
+                    ))}
+                  </div>
+                  <p>
+                    12 overlapping room views <span>→</span> {formatPoints(totalPoints)} navigable spatial points
+                  </p>
+                </>
+              )}
+            </div>
+          )}
           {dropActive && (
             <div className="drop-overlay">
               <strong>Drop every capture here</strong>

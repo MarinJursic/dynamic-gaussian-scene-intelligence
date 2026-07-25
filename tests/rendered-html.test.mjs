@@ -26,5 +26,9 @@ test("server renders the DGSI application shell", async () => {
   assert.match(html, /aria-label="Rendering budget"/);
   assert.match(html, /Hide selected class|Whole scene/);
   assert.match(html, /Walk through space/);
+  assert.match(html, /Switch color theme/);
+  assert.match(html, /INPUT VIEWS/);
+  assert.match(html, /Living-room source view 00/);
+  assert.match(html, /prefers-color-scheme: light/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });

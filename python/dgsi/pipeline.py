@@ -327,13 +327,24 @@ def _frame_points(
     path: Path, index: int, count: int, mode: str, points_per_frame: int
 ) -> np.ndarray:
     with Image.open(path) as image:
-        rgb_image = np.asarray(image.convert("RGB").resize((160, 100)), dtype=np.float32)
+        rgb_image = np.asarray(image.convert("RGB").resize((320, 200)), dtype=np.float32)
     height, width, _ = rgb_image.shape
     available = width * height
-    sample_count = min(points_per_frame, available)
-    # A low-discrepancy walk makes the packed result byte-for-byte reproducible.
-    start = (index * 7919) % available
-    flat_indices = (start + np.arange(sample_count, dtype=np.int64) * 3571) % available
+    candidates = np.arange(available, dtype=np.int64)
+    horizontal_fov = math.radians(105)
+    if mode != "gallery-fallback" and count > 1:
+        # Keep one non-overlapping angular sector from every ordered view.
+        # This turns an overlapping panorama/video sweep into a coherent room
+        # shell instead of alpha-blending several offset views at each angle.
+        columns = candidates % width
+        normalized_x = columns.astype(np.float32) / (width - 1) - 0.5
+        sector_half_width = min(0.5, math.pi / count / horizontal_fov)
+        candidates = candidates[np.abs(normalized_x) <= sector_half_width]
+    sample_count = min(points_per_frame, len(candidates))
+    # A seeded permutation is deterministic without creating the diagonal
+    # lattice artifacts produced by a fixed raster stride.
+    rng = np.random.default_rng(0xD651 + index * 7919)
+    flat_indices = rng.choice(candidates, size=sample_count, replace=False)
     y = flat_indices // width
     x = flat_indices % width
     colors = rgb_image[y, x] / 255.0
@@ -354,28 +365,26 @@ def _frame_points(
         )
         px, py, pz = points[:, 0], points[:, 1], points[:, 2]
     else:
-        # A deterministic pinhole/depth-sheet surrogate projects every view
-        # from a camera path into one shared room-scale coordinate system.
-        # Production adapters replace this depth prior with calibrated poses and
-        # optimized 3D Gaussian parameters.
-        depth = 1.85 + (1.0 - luminance) * 2.65 + 0.16 * np.sin(u * 17 + index)
-        rays = (
-            forward[None, :] * 1.38
-            + right[None, :] * (u * 1.55)[:, None]
-            + up[None, :] * (v * 1.02)[:, None]
-        )
-        rays /= np.maximum(np.linalg.norm(rays, axis=1, keepdims=True), 1e-6)
-        points = position[None, :] + rays * depth[:, None]
-        px, py, pz = points[:, 0], points[:, 1], points[:, 2]
+        # Related views form an inside-facing panoramic room shell. Adjacent
+        # frames overlap in angle, so a coherent capture retains recognizable
+        # source color while the viewer can move within the resulting volume.
+        # This remains a deterministic visualization surrogate: production
+        # adapters replace it with recovered poses and optimized Gaussians.
+        center_angle = index / max(1, count) * math.tau
+        theta = center_angle + u * horizontal_fov
+        radius = 3.65 + (0.5 - luminance) * 0.16 + 0.06 * np.sin(u * 13 + index)
+        px = np.sin(theta) * radius
+        pz = np.cos(theta) * radius
+        py = v * 3.18
 
     semantic = _semantic(colors)
-    size = 0.028 + (1.0 - luminance) * 0.035
+    size = 0.024 + (1.0 - luminance) * 0.028
     phase = (x * 0.071 + y * 0.039 + index * 0.23).astype(np.float32)
     temporal = index / max(1, count - 1)
     # Installed-work and moving-human colors carry temporal/change signals in the demo.
     change = np.where(semantic == 4, 0.45 + 0.55 * temporal, 0.0)
     change = np.where(semantic == 2, 0.25 + 0.4 * abs(temporal - 0.5), change)
-    opacity = np.clip(0.36 + luminance * 0.5, 0.25, 0.9)
+    opacity = np.clip(0.58 + luminance * 0.42, 0.5, 0.98)
     return np.column_stack([px, py, pz, colors, size, semantic, phase, change, opacity]).astype(
         "<f4"
     )
