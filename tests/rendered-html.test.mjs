@@ -34,5 +34,5 @@ test("server renders the DGSI application shell", async () => {
   assert.match(html, /RENDERED ROOM/);
   assert.match(html, /Preparing 360° context/);
   assert.match(html, /prefers-color-scheme: light/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+  assert.doesNotMatch(html, /starter-preview|Your site is taking shape|react-loading-skeleton/i);
 });
