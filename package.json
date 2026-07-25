@@ -1,6 +1,7 @@
 {
   "name": "dynamic-gaussian-scene-intelligence",
   "version": "0.1.0",
+  "description": "Local-first image/video-to-space workbench with navigable Gaussian-style scenes, source comparison, semantic layers, and PLY export.",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

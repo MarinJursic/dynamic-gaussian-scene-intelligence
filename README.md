@@ -8,11 +8,31 @@ DGSI is a portfolio-grade, local-first MVP spanning a TypeScript/Three.js viewer
 
 > **Accuracy contract:** the included CPU path is an inspectable point/gaussian *surrogate*, not trained 3D Gaussian Splatting. It exists so every clone can run the full input → package → browser loop without CUDA, credentials, models, or downloads. The production path is documented separately and should use recovered camera poses plus Gaussian optimization with COLMAP and nerfstudio/gsplat.
 
-## Demo story
+## Room capture → navigable space
+
+The bundled demo starts with twelve overlapping perspective views derived from one coherent, photorealistic living-room panorama. The contact sheet makes the source coverage explicit:
+
+![Twelve overlapping input views of the same living room](docs/showcase/room-input-contact-sheet.png)
+
+Those views are packaged into a 108.7k-point, inside-facing room shell. The literal application capture below shows four source views over the resulting spatial render, so the relationship between input and output is visible without reading the implementation:
+
+![DGSI input views compared with the generated navigable room](docs/showcase/room-input-to-space.png)
+
+The six-second walkthrough is captured from the shipped Three.js viewer while its manifest camera path moves through the room:
+
+![DGSI room reconstruction camera walkthrough](docs/showcase/room-walkthrough.gif)
+
+[H.264 walkthrough](docs/showcase/room-walkthrough.mp4) · [Room manifest](public/room-demo/manifest.json) · [Room PLY](public/room-demo/scene.ply) · [Source panorama](examples/room-panorama/living-room-panorama.png)
+
+> **Example provenance:** the room panorama is an original AI-generated demonstration asset, not a scan of a private residence. The twelve checked-in views are deterministic FFmpeg projections from that panorama. This produces a coherent, reproducible visual fixture; it does not substitute for translated, overlapping camera capture when training a production 3DGS model.
+
+Click **⌖** to enter Explore space. WASD or the arrow keys move through the bounded volume, Q/E changes height, dragging looks around, the wheel moves forward/back, and Shift boosts movement. The theme button switches the entire workbench between persistent light and dark themes.
+
+## Additional demo story
 
 ![Deterministic sample capture moving through time](docs/sample-ingestion.gif)
 
-[MP4 source capture](examples/sample-capture.mp4) · [Bundled browser manifest](public/demo/manifest.json) · [PLY export](public/demo/scene.ply)
+[MP4 source capture](examples/sample-capture.mp4) · [Legacy sample manifest](public/demo/manifest.json) · [Legacy sample PLY](public/demo/scene.ply)
 
 ### Verified browser build
 
@@ -37,6 +57,8 @@ The screenshot below is captured from the shipped application after enabling **E
 - A/B temporal-proxy heatmap with change counts and deterministic per-splat confidence derived from the packed attributes.
 - Two-point measurement in declared scene units, exposure relighting presets, camera reset, orbit, dolly, class-level non-destructive removal, and responsive mobile layout.
 - A real navigable-space mode with manifest-defined bounds and entry pose: WASD/arrows move, Q/E changes height, Shift boosts, drag changes view direction, and wheel motion advances or retreats.
+- A persistent, OS-aware light/dark theme with an accessible theme control and light-mode panel contrast.
+- An in-view source-filmstrip comparison for the bundled room, linking twelve input views to the live spatial output.
 - Multiple-file picker and drag-and-drop importing for mixed image/video batches; every capture group receives a balanced share of the frame budget.
 - WebXR capability detection and real `immersive-vr` session request through Three.js.
 - CLI and FastAPI ingestion for one or many images, image directories, videos, or mixed batches.
@@ -103,7 +125,7 @@ In the viewer:
 The checked-in sample images were created by the generator—no network or private data is involved.
 
 ```bash
-# Regenerate a capture
+# Regenerate the legacy synthetic capture
 .venv/bin/dgsi sample --output examples/sample-capture --frames 12
 
 # Images → browser package
@@ -125,6 +147,15 @@ The checked-in sample images were created by the generator—no network or priva
   --output runtime-scenes/mixed-space \
   --video-fps 2 \
   --max-frames 16
+
+# Recreate the photorealistic room views from the checked-in panorama
+./scripts/make-room-capture.sh
+
+# Room views → the bundled default scene
+.venv/bin/dgsi ingest examples/room-capture \
+  --output public/room-demo \
+  --points-per-frame 9000 \
+  --max-frames 12
 ```
 
 Useful ingestion controls:
@@ -189,9 +220,9 @@ The manifest carries bounds, semantic names/colors, source/file/image/video coun
 
 1. **Inspect:** resize frames for analysis; calculate gradient-based sharpness, mean exposure, normalized RGB histograms, and adjacent thumbnail difference.
 2. **Balance:** allocate the total frame budget across all image groups and videos so later sources are not silently discarded.
-3. **Relate:** compare adjacent histogram vectors. A median similarity below `0.72` triggers `gallery-fallback`.
+3. **Relate:** compare a bounded set of pairwise histogram vectors. A median similarity below `0.72` triggers `gallery-fallback`.
 4. **Sample:** traverse pixels with a deterministic low-discrepancy stride.
-5. **Project:** for related captures, cast view rays from a shared circular camera path into one room-scale coordinate system. For unrelated inputs, orient full-color capture panels around a circular spatial gallery.
+5. **Project:** for related ordered captures, retain a non-overlapping angular sector from every overlapping view and map it to an inside-facing room shell. For unrelated inputs, orient full-color capture panels around a circular spatial gallery.
 6. **Ground:** add a subtle sampled floor to provide scale, movement, and horizon cues without claiming recovered geometry.
 7. **Attach intelligence:** deterministic color rules add semantic IDs; orange people receive timeline-driven motion phase; violet installed work receives temporal/change confidence.
 8. **Package:** emit a versioned packed binary, PLY, strict navigation metadata, and provenance-rich manifest.
@@ -251,11 +282,13 @@ This table is the product’s accuracy boundary: the left column is runnable tod
 - Walk mode is bounded by the generated spatial envelope. It supplies exploration controls, not collision meshes or physically recovered metric scale.
 - WebXR requires a secure context, supporting browser, and connected device; ordinary desktop viewing is always available.
 - The bundled render uses isotropic gaussian-style point sprites, not a CUDA Gaussian rasterizer. It demonstrates the product workflow and scene contract, not photorealistic novel-view synthesis.
+- The bundled room uses panorama-derived rotational views for a deterministic visual comparison. Follow the translated-camera guidance above for COLMAP/SfM or trained 3DGS input.
 
 ## Primary references
 
 - Kerbl et al., [3D Gaussian Splatting for Real-Time Radiance Field Rendering](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (SIGGRAPH 2023).
-- COLMAP, [official Structure-from-Motion and Multi-View Stereo tutorial](https://colmap.github.io/tutorial.html), including capture guidance and ordered video matching.
+- COLMAP, [official Structure-from-Motion and Multi-View Stereo tutorial](https://colmap.github.io/tutorial), including capture guidance, overlap, texture, camera translation, and ordered video matching.
+- nerfstudio, [custom data guide](https://docs.nerf.studio/quickstart/custom_dataset.html), covering images, video, 360 capture, COLMAP processing, and camera-pose requirements.
 - nerfstudio, [Splatfacto documentation](https://docs.nerf.studio/nerfology/methods/splat.html), including COLMAP initialization and PLY export.
 - gsplat, [official documentation](https://docs.gsplat.studio/main/), for optimized Gaussian rasterization/training.
 - Luiten et al., [Dynamic 3D Gaussians](https://dynamic3dgaussians.github.io/), for temporally persistent moving/rotating Gaussian representations.
@@ -270,8 +303,12 @@ app/                       Next.js viewer and GLSL scene runtime
 python/dgsi/               ingestion library, CLI, API, sample generator
 python/tests/              deterministic pipeline and API tests
 public/demo/               bundled ready-to-view scene
+public/room-demo/          default living-room spatial scene
 examples/sample-capture/   generated image sequence
 examples/sample-capture.mp4 real video input for smoke testing
+examples/room-panorama/    coherent room source panorama
+examples/room-capture/     twelve overlapping perspective views
+scripts/make-room-capture.sh reproducible FFmpeg view derivation
 docs/                      README media
 ```
 

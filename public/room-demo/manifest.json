@@ -1,0 +1,380 @@
+{
+  "schema": "dgsi.scene/v1",
+  "title": "Room Capture",
+  "description": "Navigable CPU Gaussian-style spatial surrogate reconstructed from all supplied images and videos.",
+  "source": {
+    "kind": "images",
+    "frame_count": 12,
+    "file_count": 12,
+    "image_count": 12,
+    "video_count": 0,
+    "asset_names": [
+      "room-00.png",
+      "room-01.png",
+      "room-02.png",
+      "room-03.png",
+      "room-04.png",
+      "room-05.png",
+      "room-06.png",
+      "room-07.png",
+      "room-08.png",
+      "room-09.png",
+      "room-10.png",
+      "room-11.png"
+    ],
+    "video_frame_counts": []
+  },
+  "point_count": 108656,
+  "stride_floats": 11,
+  "binary_url": "scene.dgsi",
+  "ply_url": "scene.ply",
+  "progressive_chunks": [
+    0.18,
+    0.42,
+    0.7,
+    1.0
+  ],
+  "bounds": {
+    "min": [
+      -4.627799987792969,
+      -1.6200000047683716,
+      -4.507999897003174
+    ],
+    "max": [
+      4.627799987792969,
+      1.590000033378601,
+      4.507999897003174
+    ]
+  },
+  "semantics": [
+    {
+      "id": 0,
+      "name": "Structure",
+      "color": "#8ea0ad"
+    },
+    {
+      "id": 1,
+      "name": "Glazing",
+      "color": "#65d6ff"
+    },
+    {
+      "id": 2,
+      "name": "People",
+      "color": "#ffb547"
+    },
+    {
+      "id": 3,
+      "name": "Vegetation",
+      "color": "#67e8a3"
+    },
+    {
+      "id": 4,
+      "name": "Installed work",
+      "color": "#b58cff"
+    }
+  ],
+  "timeline": {
+    "duration_seconds": 12,
+    "comparison_label": "Week 12 \u2192 Week 18"
+  },
+  "coordinate_system": {
+    "units": "scene-units",
+    "metric_scale_known": false
+  },
+  "spatial": {
+    "layout": "shared-camera-space",
+    "navigable": true,
+    "floor_height": -1.62,
+    "navigable_bounds": {
+      "min": [
+        -5.177800178527832,
+        -1.8700000047683716,
+        -5.058000087738037
+      ],
+      "max": [
+        5.177800178527832,
+        1.840000033378601,
+        5.058000087738037
+      ]
+    },
+    "entry_pose": {
+      "position": [
+        0.0,
+        0.0,
+        0.7799999713897705
+      ],
+      "target": [
+        0.0,
+        0.0,
+        -1.6200000047683716
+      ]
+    }
+  },
+  "camera_path": [
+    {
+      "time": 0.0,
+      "position": [
+        0.0,
+        0.0,
+        0.7799999713897705
+      ],
+      "target": [
+        0.0,
+        0.0,
+        -1.6200000047683716
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.09091,
+      "position": [
+        0.38999998569488525,
+        0.06930000334978104,
+        0.6754999756813049
+      ],
+      "target": [
+        -0.8098000288009644,
+        0.02669999934732914,
+        -1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.18182,
+      "position": [
+        0.6754999756813049,
+        0.06930000334978104,
+        0.38999998569488525
+      ],
+      "target": [
+        -1.4026000499725342,
+        0.02669999934732914,
+        -0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.27273,
+      "position": [
+        0.7799999713897705,
+        0.0,
+        0.0
+      ],
+      "target": [
+        -1.6200000047683716,
+        0.0,
+        -0.0
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.36364,
+      "position": [
+        0.6754999756813049,
+        -0.06930000334978104,
+        -0.38999998569488525
+      ],
+      "target": [
+        -1.4026000499725342,
+        -0.02669999934732914,
+        0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.45455,
+      "position": [
+        0.38999998569488525,
+        -0.06930000334978104,
+        -0.6754999756813049
+      ],
+      "target": [
+        -0.8098000288009644,
+        -0.02669999934732914,
+        1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.54545,
+      "position": [
+        0.0,
+        -0.0,
+        -0.7799999713897705
+      ],
+      "target": [
+        -0.0,
+        -0.0,
+        1.6200000047683716
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.63636,
+      "position": [
+        -0.38999998569488525,
+        0.06930000334978104,
+        -0.6754999756813049
+      ],
+      "target": [
+        0.8098000288009644,
+        0.02669999934732914,
+        1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.72727,
+      "position": [
+        -0.6754999756813049,
+        0.06930000334978104,
+        -0.38999998569488525
+      ],
+      "target": [
+        1.4026000499725342,
+        0.02669999934732914,
+        0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.81818,
+      "position": [
+        -0.7799999713897705,
+        0.0,
+        -0.0
+      ],
+      "target": [
+        1.6200000047683716,
+        0.0,
+        0.0
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.90909,
+      "position": [
+        -0.6754999756813049,
+        -0.06930000334978104,
+        0.38999998569488525
+      ],
+      "target": [
+        1.4026000499725342,
+        -0.02669999934732914,
+        -0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 1.0,
+      "position": [
+        -0.38999998569488525,
+        -0.06930000334978104,
+        0.6754999756813049
+      ],
+      "target": [
+        0.8098000288009644,
+        -0.02669999934732914,
+        -1.4026000499725342
+      ],
+      "fov": 58
+    }
+  ],
+  "quality": {
+    "status": "ready",
+    "median_relatedness": 0.865,
+    "frames": [
+      {
+        "file": "room-00.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 279.83,
+        "exposure": 0.386
+      },
+      {
+        "file": "room-01.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 241.29,
+        "exposure": 0.306
+      },
+      {
+        "file": "room-02.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 247.43,
+        "exposure": 0.339
+      },
+      {
+        "file": "room-03.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 202.34,
+        "exposure": 0.338
+      },
+      {
+        "file": "room-04.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 175.12,
+        "exposure": 0.413
+      },
+      {
+        "file": "room-05.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 163.0,
+        "exposure": 0.453
+      },
+      {
+        "file": "room-06.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 171.33,
+        "exposure": 0.507
+      },
+      {
+        "file": "room-07.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 238.58,
+        "exposure": 0.507
+      },
+      {
+        "file": "room-08.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 296.96,
+        "exposure": 0.542
+      },
+      {
+        "file": "room-09.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 349.76,
+        "exposure": 0.533
+      },
+      {
+        "file": "room-10.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 275.89,
+        "exposure": 0.516
+      },
+      {
+        "file": "room-11.png",
+        "width": 960,
+        "height": 640,
+        "sharpness": 277.89,
+        "exposure": 0.497
+      }
+    ],
+    "warnings": [],
+    "reconstruction_mode": "surrogate-reconstruction"
+  },
+  "provenance": {
+    "pipeline": "dgsi-cpu-surrogate/0.1.0",
+    "deterministic": true,
+    "production_gaussian_optimized": false
+  }
+}
