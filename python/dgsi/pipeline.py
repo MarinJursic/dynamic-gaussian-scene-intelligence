@@ -12,7 +12,7 @@ from pathlib import Path
 
 import imageio_ffmpeg
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 VIDEO_SUFFIXES = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
@@ -418,6 +418,45 @@ def _support_points(frame_count: int, median_color: np.ndarray, mode: str) -> np
     )
 
 
+def _write_environment(frames: Sequence[Path], output: Path, mode: str) -> dict:
+    """Write a complete source-grounded 360° context texture.
+
+    The texture prevents uncovered rays from falling through to black while
+    keeping completion separate from reconstructed geometry.
+    """
+
+    width, height = 2048, 1024
+    canvas = Image.new("RGB", (width, height))
+    stripe_edges = np.linspace(0, width, len(frames) + 1, dtype=np.int64)
+    horizontal_fov = math.radians(105)
+    sector_fraction = min(1.0, (math.tau / max(1, len(frames))) / horizontal_fov)
+
+    for index, frame in enumerate(frames):
+        with Image.open(frame) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            if mode != "gallery-fallback" and len(frames) > 1:
+                crop_width = max(1, round(image.width * sector_fraction))
+                left = (image.width - crop_width) // 2
+                image = image.crop((left, 0, left + crop_width, image.height))
+            stripe_width = int(stripe_edges[index + 1] - stripe_edges[index])
+            fitted = ImageOps.fit(
+                image,
+                (stripe_width, height),
+                method=Image.Resampling.LANCZOS,
+                centering=(0.5, 0.5),
+            )
+            canvas.paste(fitted, (int(stripe_edges[index]), 0))
+
+    canvas.save(output, "JPEG", quality=94, subsampling=0, optimize=True)
+    return {
+        "url": output.name,
+        "projection": "equirectangular",
+        "fill_strategy": ("gallery-mosaic" if mode == "gallery-fallback" else "source-mosaic"),
+        "generated": True,
+        "coverage": round(min(1.0, len(frames) * horizontal_fov / math.tau), 3),
+    }
+
+
 def _camera_path(frame_count: int, mode: str) -> list[dict]:
     keyframes: list[dict] = []
     for index in range(max(2, frame_count)):
@@ -508,6 +547,11 @@ def ingest_captures(
         output_path.mkdir(parents=True, exist_ok=True)
         _write_binary(output_path / "scene.dgsi", points)
         _write_ply(output_path / "scene.ply", points)
+        environment = _write_environment(
+            frames,
+            output_path / "environment.jpg",
+            report.reconstruction_mode,
+        )
         report_dict = asdict(report)
         camera_path = _camera_path(len(frames), report.reconstruction_mode)
         bounds_min = points[:, :3].min(axis=0)
@@ -530,6 +574,7 @@ def ingest_captures(
             "stride_floats": STRIDE_FLOATS,
             "binary_url": "scene.dgsi",
             "ply_url": "scene.ply",
+            "environment": environment,
             "progressive_chunks": [0.18, 0.42, 0.7, 1.0],
             "bounds": {
                 "min": bounds_min.round(4).tolist(),
@@ -587,5 +632,7 @@ def ingest_capture(
 
 def copy_scene(source: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
-    for name in ("manifest.json", "scene.dgsi", "scene.ply"):
+    for name in ("manifest.json", "scene.dgsi", "scene.ply", "environment.jpg"):
+        if not (source / name).exists():
+            continue
         shutil.copy2(source / name, destination / name)

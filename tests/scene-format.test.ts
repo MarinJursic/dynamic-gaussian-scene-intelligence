@@ -18,6 +18,13 @@ const manifest = {
   stride_floats: 11,
   binary_url: "scene.dgsi",
   ply_url: "scene.ply",
+  environment: {
+    url: "environment.jpg",
+    projection: "equirectangular",
+    fill_strategy: "source-mosaic",
+    generated: true,
+    coverage: 0.75,
+  },
   progressive_chunks: [0.5, 1],
   bounds: { min: [-1, -1, -1], max: [1, 1, 1] },
   semantics: [
@@ -92,6 +99,13 @@ test("rejects manifest/binary disagreement and malformed progressive chunks", ()
       ],
     }),
     /camera path/,
+  );
+  assert.throws(
+    () => validateManifest({
+      ...manifest,
+      environment: { ...manifest.environment, coverage: 1.2 },
+    }),
+    /environment completion/,
   );
 });
 

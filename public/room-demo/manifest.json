@@ -28,6 +28,13 @@
   "stride_floats": 11,
   "binary_url": "scene.dgsi",
   "ply_url": "scene.ply",
+  "environment": {
+    "url": "environment.jpg",
+    "projection": "equirectangular",
+    "fill_strategy": "source-panorama",
+    "generated": true,
+    "coverage": 1.0
+  },
   "progressive_chunks": [
     0.18,
     0.42,
