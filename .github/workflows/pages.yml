@@ -25,13 +25,15 @@ jobs:
           cache: npm
       - uses: actions/configure-pages@v5
       - run: npm ci
-      - run: npm run build
+      - run: ./node_modules/.bin/next build --webpack
         env:
           GITHUB_PAGES: "true"
-      - run: touch dist/client/.nojekyll
+          NEXT_PUBLIC_SITE_URL: https://marinjursic.github.io
+      - run: test -s out/index.html
+      - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/client
+          path: out
 
   deploy:
     needs: build
