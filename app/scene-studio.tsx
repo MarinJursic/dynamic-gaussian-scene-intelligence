@@ -19,6 +19,8 @@ type Runtime = {
   camera: THREE.PerspectiveCamera;
   material: THREE.ShaderMaterial;
   points: THREE.Points;
+  environment: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  environmentTexture: THREE.Texture | null;
   geometry: THREE.BufferGeometry;
   pointCount: number;
   semantic: Float32Array;
@@ -32,6 +34,8 @@ type Runtime = {
   lastPointer: { x: number; y: number };
   cameraPathEnabled: boolean;
   cameraPathFrames: SceneManifest["camera_path"];
+  cameraPositionCurve: THREE.CatmullRomCurve3 | null;
+  cameraTargetCurve: THREE.CatmullRomCurve3 | null;
   navigation: "orbit" | "walk";
   walkPosition: THREE.Vector3;
   entryPosition: THREE.Vector3;
@@ -136,6 +140,8 @@ export function SceneStudio() {
   const cameraReadoutRef = useRef<HTMLSpanElement>(null);
   const loadRequestRef = useRef<AbortController | null>(null);
   const qualityRef = useRef(82);
+  const environmentEnabledRef = useRef(true);
+  const presentationModeRef = useRef<"rendered" | "splats">("rendered");
   const [manifest, setManifest] = useState<SceneManifest | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
   const [status, setStatus] = useState("Opening packaged scene");
@@ -161,6 +167,9 @@ export function SceneStudio() {
   const [navigation, setNavigation] = useState<"orbit" | "walk">("orbit");
   const [dropActive, setDropActive] = useState(false);
   const [showSourceViews, setShowSourceViews] = useState(true);
+  const [environmentEnabled, setEnvironmentEnabled] = useState(true);
+  const [environmentStatus, setEnvironmentStatus] = useState("Preparing 360° context");
+  const [presentationMode, setPresentationMode] = useState<"rendered" | "splats">("rendered");
 
   const updateOrbitCamera = useCallback((runtime: Runtime) => {
     runtime.pitch = THREE.MathUtils.clamp(runtime.pitch, -1.15, 1.15);
@@ -193,17 +202,18 @@ export function SceneStudio() {
 
   const applyCameraPath = useCallback((runtime: Runtime) => {
     const frames = runtime.cameraPathFrames;
-    if (frames.length < 2) return;
+    if (frames.length < 2 || !runtime.cameraPositionCurve || !runtime.cameraTargetCurve) return;
     const time = THREE.MathUtils.clamp(runtime.timeline, 0, 1);
+    runtime.camera.position.copy(runtime.cameraPositionCurve.getPoint(time));
+    runtime.target.copy(runtime.cameraTargetCurve.getPoint(time));
     let upper = frames.findIndex((frame) => frame.time >= time);
     if (upper <= 0) upper = 1;
     const start = frames[upper - 1];
     const end = frames[Math.min(upper, frames.length - 1)];
     const span = Math.max(1e-6, end.time - start.time);
-    const alpha = THREE.MathUtils.clamp((time - start.time) / span, 0, 1);
-    runtime.camera.position.lerpVectors(vector(start.position), vector(end.position), alpha);
-    runtime.target.lerpVectors(vector(start.target), vector(end.target), alpha);
-    runtime.camera.fov = THREE.MathUtils.lerp(start.fov, end.fov, alpha);
+    const segment = THREE.MathUtils.clamp((time - start.time) / span, 0, 1);
+    const eased = segment * segment * (3 - 2 * segment);
+    runtime.camera.fov = THREE.MathUtils.lerp(start.fov, end.fov, eased);
     runtime.camera.updateProjectionMatrix();
     runtime.camera.lookAt(runtime.target);
   }, []);
@@ -219,6 +229,11 @@ export function SceneStudio() {
     const nextManifest = validateManifest(await manifestResponse.json());
     setActiveManifestUrl(manifestUrl);
     setManifest(nextManifest);
+    setEnvironmentStatus(
+      nextManifest.environment
+        ? "Loading source-grounded 360° context"
+        : "No context layer supplied",
+    );
     setStatus("Streaming packed splats");
     setLoadProgress(18);
     const binaryResponse = await fetch(resolveSceneUrl(manifestUrl, nextManifest.binary_url), {
@@ -234,6 +249,41 @@ export function SceneStudio() {
     setMeanChange(decoded.meanChange);
     const runtime = runtimeRef.current;
     if (!runtime) return;
+    runtime.environmentTexture?.dispose();
+    runtime.environmentTexture = null;
+    runtime.environment.material.map = null;
+    runtime.environment.material.needsUpdate = true;
+    runtime.environment.visible = false;
+    runtime.points.visible = true;
+    if (nextManifest.environment) {
+      try {
+        const texture = await new THREE.TextureLoader().loadAsync(
+          resolveSceneUrl(manifestUrl, nextManifest.environment.url),
+        );
+        if (controller.signal.aborted || runtimeRef.current !== runtime) {
+          texture.dispose();
+          return;
+        }
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.repeat.x = -1;
+        texture.offset.x = 1;
+        texture.anisotropy = Math.min(8, runtime.renderer.capabilities.getMaxAnisotropy());
+        runtime.environmentTexture = texture;
+        runtime.environment.material.map = texture;
+        runtime.environment.material.needsUpdate = true;
+        runtime.environment.visible = environmentEnabledRef.current;
+        runtime.points.visible =
+          presentationModeRef.current === "splats" || !environmentEnabledRef.current;
+        setEnvironmentStatus(
+          nextManifest.environment.fill_strategy === "source-panorama"
+            ? "360° source panorama · high-fidelity context"
+            : "360° source mosaic · completed context",
+        );
+      } catch {
+        setEnvironmentStatus("360° context unavailable · splats only");
+      }
+    }
     runtime.geometry.dispose();
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -256,6 +306,18 @@ export function SceneStudio() {
     );
     runtime.target.copy(center);
     runtime.cameraPathFrames = nextManifest.camera_path;
+    runtime.cameraPositionCurve = new THREE.CatmullRomCurve3(
+      nextManifest.camera_path.map((frame) => vector(frame.position)),
+      false,
+      "centripetal",
+      0.35,
+    );
+    runtime.cameraTargetCurve = new THREE.CatmullRomCurve3(
+      nextManifest.camera_path.map((frame) => vector(frame.target)),
+      false,
+      "centripetal",
+      0.35,
+    );
     runtime.boundsMin.copy(vector(nextManifest.spatial.navigable_bounds.min));
     runtime.boundsMax.copy(vector(nextManifest.spatial.navigable_bounds.max));
     runtime.entryPosition.copy(vector(nextManifest.spatial.entry_pose.position));
@@ -293,8 +355,8 @@ export function SceneStudio() {
     const mount = mountRef.current;
     if (!mount) return;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#050807");
-    scene.fog = new THREE.FogExp2("#050807", 0.075);
+    scene.background = new THREE.Color("#151918");
+    scene.fog = new THREE.FogExp2("#151918", 0.018);
     const camera = new THREE.PerspectiveCamera(52, 1, 0.01, 100);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
@@ -323,13 +385,27 @@ export function SceneStudio() {
     });
     const points = new THREE.Points(geometry, material);
     points.frustumCulled = false;
+    const environmentGeometry = new THREE.SphereGeometry(28, 80, 48);
+    const environmentMaterial = new THREE.MeshBasicMaterial({
+      color: "#ffffff",
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      toneMapped: false,
+    });
+    const environment = new THREE.Mesh(environmentGeometry, environmentMaterial);
+    environment.renderOrder = -10;
+    environment.visible = false;
+    scene.add(environment);
     scene.add(points);
     const runtime: Runtime = {
-      renderer, scene, camera, material, points, geometry, pointCount: 0,
+      renderer, scene, camera, material, points, environment, environmentTexture: null,
+      geometry, pointCount: 0,
       semantic: new Float32Array(), positions: new Float32Array(),
       target: new THREE.Vector3(0, 0, -1.2), yaw: 0.2, pitch: 0.18, distance: 5.5,
       dragging: false, dragMoved: false, lastPointer: { x: 0, y: 0 },
-      cameraPathEnabled: false, cameraPathFrames: [], navigation: "orbit",
+      cameraPathEnabled: false, cameraPathFrames: [],
+      cameraPositionCurve: null, cameraTargetCurve: null, navigation: "orbit",
       walkPosition: new THREE.Vector3(0, 0, 2.5),
       entryPosition: new THREE.Vector3(0, 0, 2.5),
       entryTarget: new THREE.Vector3(0, 0, 0),
@@ -426,7 +502,11 @@ export function SceneStudio() {
       window.removeEventListener("blur", onBlur);
       renderer.setAnimationLoop(null);
       scene.remove(points);
+      scene.remove(environment);
       runtime.geometry.dispose();
+      runtime.environmentTexture?.dispose();
+      environmentGeometry.dispose();
+      environmentMaterial.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       material.dispose();
@@ -434,6 +514,32 @@ export function SceneStudio() {
       runtimeRef.current = null;
     };
   }, [applyCameraPath, loadScene, updateOrbitCamera, updateWalkCamera]);
+
+  useEffect(() => {
+    environmentEnabledRef.current = environmentEnabled;
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    runtime.environment.visible = environmentEnabled && Boolean(runtime.environmentTexture);
+    runtime.points.visible =
+      presentationModeRef.current === "splats" ||
+      !environmentEnabled ||
+      !runtime.environmentTexture;
+  }, [environmentEnabled]);
+
+  useEffect(() => {
+    presentationModeRef.current = presentationMode;
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    runtime.points.visible =
+      presentationMode === "splats" ||
+      !environmentEnabledRef.current ||
+      !runtime.environmentTexture;
+    setNotice(
+      presentationMode === "rendered"
+        ? "Rendered room · source-grounded completion hides analysis points"
+        : "Splat inspection · raw reconstruction points visible",
+    );
+  }, [presentationMode]);
 
   useEffect(() => {
     const runtime = runtimeRef.current;
@@ -814,7 +920,7 @@ export function SceneStudio() {
           <div className="viewport-top">
             <div className="view-chip"><span className="pulse" /> {navigation === "walk" ? "EXPLORE SPACE" : "ORBIT INSPECTION"}</div>
             <div className="view-chip subtle">
-              {fps} FPS <i /> {formatPoints(visibleBudgetPoints)} SPLATS <i /> {manifest?.spatial.layout.replaceAll("-", " ") ?? "loading"}
+              {fps} FPS <i /> {presentationMode === "rendered" ? "RENDERED ROOM" : `${formatPoints(visibleBudgetPoints)} SPLATS`} <i /> {environmentStatus}
             </div>
           </div>
           {activeManifestUrl === DEFAULT_MANIFEST && navigation === "orbit" && (
@@ -885,6 +991,30 @@ export function SceneStudio() {
               title="Walk through space"
             >
               ⌖
+            </button>
+            <button
+              className={presentationMode === "rendered" ? "active" : ""}
+              aria-label="Toggle rendered room and splat inspection"
+              aria-pressed={presentationMode === "rendered"}
+              onClick={(event) => {
+                event.stopPropagation();
+                setPresentationMode((mode) => mode === "rendered" ? "splats" : "rendered");
+              }}
+              title={presentationMode === "rendered" ? "Show splat inspection" : "Show rendered room"}
+            >
+              ◐
+            </button>
+            <button
+              className={environmentEnabled ? "active" : ""}
+              aria-label="Toggle completed environment"
+              aria-pressed={environmentEnabled}
+              onClick={(event) => {
+                event.stopPropagation();
+                setEnvironmentEnabled((value) => !value);
+              }}
+              title="Toggle source-grounded 360 degree completion"
+            >
+              ◎
             </button>
             <button
               className={cameraPath ? "active" : ""}

@@ -8,37 +8,36 @@ DGSI is a portfolio-grade, local-first MVP spanning a TypeScript/Three.js viewer
 
 > **Accuracy contract:** the included CPU path is an inspectable point/gaussian *surrogate*, not trained 3D Gaussian Splatting. It exists so every clone can run the full input → package → browser loop without CUDA, credentials, models, or downloads. The production path is documented separately and should use recovered camera poses plus Gaussian optimization with COLMAP and nerfstudio/gsplat.
 
-## Room capture → navigable space
+## Room capture → completed navigable space
 
-The bundled demo starts with twelve overlapping perspective views derived from one coherent, photorealistic living-room panorama. The contact sheet makes the source coverage explicit:
+The bundled demo starts with twelve overlapping perspective views derived from one
+coherent, photorealistic living-room panorama. Those views are packaged into a
+108.7k-point, inside-facing room shell plus a source-grounded equirectangular
+completion layer.
 
-![Twelve overlapping input views of the same living room](docs/showcase/room-input-contact-sheet.png)
+[Room manifest](public/room-demo/manifest.json) · [Room PLY](public/room-demo/scene.ply) · [Source panorama](examples/room-panorama/living-room-panorama.png)
 
-Those views are packaged into a 108.7k-point, inside-facing room shell. The literal application capture below shows four source views over the resulting spatial render, so the relationship between input and output is visible without reading the implementation:
+The old contact sheet, image-cut walkthrough, raw-splat screenshot, and legacy demo
+GIF are intentionally no longer embedded. Below the lead image, this README now
+accepts only a literal, continuous capture of the running application.
 
-![DGSI input views compared with the generated navigable room](docs/showcase/room-input-to-space.png)
+The viewer opens in **Rendered room** mode. The source-grounded 360° layer fills the
+entire field of view, so camera motion never exposes a black void. Raw reconstruction
+points are hidden by default and remain available through **Splat inspection** for
+engineering analysis. The automated walkthrough uses a centripetal Catmull–Rom
+camera path with eased FOV interpolation instead of cuts between still frames.
 
-The six-second walkthrough is captured from the shipped Three.js viewer while its manifest camera path moves through the room:
+Click **⌖** to enter Explore space. WASD or the arrow keys move through the bounded
+volume, Q/E changes height, dragging looks around, the wheel moves forward/back, and
+Shift boosts movement. The theme button switches the entire workbench between
+persistent light and dark themes.
 
-![DGSI room reconstruction camera walkthrough](docs/showcase/room-walkthrough.gif)
-
-[H.264 walkthrough](docs/showcase/room-walkthrough.mp4) · [Room manifest](public/room-demo/manifest.json) · [Room PLY](public/room-demo/scene.ply) · [Source panorama](examples/room-panorama/living-room-panorama.png)
-
-> **Example provenance:** the room panorama is an original AI-generated demonstration asset, not a scan of a private residence. The twelve checked-in views are deterministic FFmpeg projections from that panorama. This produces a coherent, reproducible visual fixture; it does not substitute for translated, overlapping camera capture when training a production 3DGS model.
-
-Click **⌖** to enter Explore space. WASD or the arrow keys move through the bounded volume, Q/E changes height, dragging looks around, the wheel moves forward/back, and Shift boosts movement. The theme button switches the entire workbench between persistent light and dark themes.
-
-## Additional demo story
-
-![Deterministic sample capture moving through time](docs/sample-ingestion.gif)
-
-[MP4 source capture](examples/sample-capture.mp4) · [Legacy sample manifest](public/demo/manifest.json) · [Legacy sample PLY](public/demo/scene.ply)
-
-### Verified browser build
-
-The screenshot below is captured from the shipped application after enabling **Explore space**. The bottom-center HUD exposes the live WASD, vertical movement, and boost controls; the coordinate readout updates as the camera moves inside the manifest's navigable bounds.
-
-![Verified DGSI browser build in first-person explore mode](docs/live-spatial-view.jpg)
+> **Example provenance:** the bundled panorama is an original demonstration asset,
+> not a scan of a private residence. Production deployments should use an attributed
+> real capture; the documented reference is Waldyrious’s directly photographed
+> 5760×2880 GoPro MAX panorama of the Biblioteca Pública de Évora entrance hall,
+> published under CC BY-SA 4.0:
+> [source and license](https://commons.wikimedia.org/wiki/File:Biblioteca_P%C3%BAblica_de_%C3%89vora_-_Hall_de_entrada_(360_panorama).jpg).
 
 1. A packed scene progressively resolves in the browser.
 2. Dynamic semantic points move while the timeline scrubs through 12 seconds.
@@ -47,6 +46,8 @@ The screenshot below is captured from the shipped application after enabling **E
 5. Measurement, camera-path, relighting, visibility, and compression controls update the live render.
 6. Walk mode lets the viewer move through the generated space with WASD/arrows, Q/E height controls, mouse look, wheel movement, and Shift boost.
 7. The spatial-view action checks WebXR capability and enters an immersive session when supported.
+8. Rendered-room mode shows the completed source context; splat-inspection mode
+   exposes the point representation without conflating it with the final view.
 
 ## What is implemented
 

@@ -15,6 +15,13 @@ export type SceneManifest = {
   stride_floats: number;
   binary_url: string;
   ply_url: string;
+  environment?: {
+    url: string;
+    projection: "equirectangular";
+    fill_strategy: "source-panorama" | "source-mosaic" | "gallery-mosaic";
+    generated: boolean;
+    coverage: number;
+  };
   progressive_chunks: number[];
   bounds: { min: [number, number, number]; max: [number, number, number] };
   semantics: { id: number; name: string; color: string }[];
@@ -110,6 +117,23 @@ export function validateManifest(value: unknown): SceneManifest {
     manifest.source.image_count + manifest.source.video_count !== manifest.source.file_count
   ) {
     throw new Error("Manifest source or PLY metadata is invalid.");
+  }
+  if (
+    manifest.environment !== undefined &&
+    (
+      typeof manifest.environment.url !== "string" ||
+      !manifest.environment.url ||
+      manifest.environment.projection !== "equirectangular" ||
+      !["source-panorama", "source-mosaic", "gallery-mosaic"].includes(
+        manifest.environment.fill_strategy,
+      ) ||
+      typeof manifest.environment.generated !== "boolean" ||
+      !Number.isFinite(manifest.environment.coverage) ||
+      manifest.environment.coverage < 0 ||
+      manifest.environment.coverage > 1
+    )
+  ) {
+    throw new Error("Manifest environment completion metadata is invalid.");
   }
   if (!manifest.bounds || !isFiniteVector(manifest.bounds.min) || !isFiniteVector(manifest.bounds.max)) {
     throw new Error("Manifest bounds are invalid.");

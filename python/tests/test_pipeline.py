@@ -27,6 +27,12 @@ def test_sample_ingestion_is_deterministic(tmp_path: Path) -> None:
     assert manifest["spatial"]["layout"] == "shared-camera-space"
     assert len(manifest["camera_path"]) == 4
     assert manifest["provenance"]["deterministic"] is True
+    assert manifest["environment"]["projection"] == "equirectangular"
+    assert manifest["environment"]["fill_strategy"] == "source-mosaic"
+    assert manifest["environment"]["coverage"] == 1.0
+    assert (first / "environment.jpg").read_bytes() == (second / "environment.jpg").read_bytes()
+    with Image.open(first / "environment.jpg") as environment:
+        assert environment.size == (2048, 1024)
     assert (first / "scene.dgsi").read_bytes() == (second / "scene.dgsi").read_bytes()
     assert (first / "scene.ply").read_text().startswith("ply\nformat ascii 1.0")
 
