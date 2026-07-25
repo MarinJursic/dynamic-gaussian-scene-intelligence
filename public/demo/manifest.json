@@ -1,0 +1,380 @@
+{
+  "schema": "dgsi.scene/v1",
+  "title": "Sample Capture",
+  "description": "Navigable CPU Gaussian-style spatial surrogate reconstructed from all supplied images and videos.",
+  "source": {
+    "kind": "images",
+    "frame_count": 12,
+    "file_count": 12,
+    "image_count": 12,
+    "video_count": 0,
+    "asset_names": [
+      "atrium-000.png",
+      "atrium-001.png",
+      "atrium-002.png",
+      "atrium-003.png",
+      "atrium-004.png",
+      "atrium-005.png",
+      "atrium-006.png",
+      "atrium-007.png",
+      "atrium-008.png",
+      "atrium-009.png",
+      "atrium-010.png",
+      "atrium-011.png"
+    ],
+    "video_frame_counts": []
+  },
+  "point_count": 22256,
+  "stride_floats": 11,
+  "binary_url": "scene.dgsi",
+  "ply_url": "scene.ply",
+  "progressive_chunks": [
+    0.18,
+    0.42,
+    0.7,
+    1.0
+  ],
+  "bounds": {
+    "min": [
+      -4.627799987792969,
+      -1.6200000047683716,
+      -4.507999897003174
+    ],
+    "max": [
+      4.627799987792969,
+      1.4349000453948975,
+      4.507999897003174
+    ]
+  },
+  "semantics": [
+    {
+      "id": 0,
+      "name": "Structure",
+      "color": "#8ea0ad"
+    },
+    {
+      "id": 1,
+      "name": "Glazing",
+      "color": "#65d6ff"
+    },
+    {
+      "id": 2,
+      "name": "People",
+      "color": "#ffb547"
+    },
+    {
+      "id": 3,
+      "name": "Vegetation",
+      "color": "#67e8a3"
+    },
+    {
+      "id": 4,
+      "name": "Installed work",
+      "color": "#b58cff"
+    }
+  ],
+  "timeline": {
+    "duration_seconds": 12,
+    "comparison_label": "Week 12 \u2192 Week 18"
+  },
+  "coordinate_system": {
+    "units": "scene-units",
+    "metric_scale_known": false
+  },
+  "spatial": {
+    "layout": "shared-camera-space",
+    "navigable": true,
+    "floor_height": -1.62,
+    "navigable_bounds": {
+      "min": [
+        -5.177800178527832,
+        -1.8700000047683716,
+        -5.058000087738037
+      ],
+      "max": [
+        5.177800178527832,
+        1.6849000453948975,
+        5.058000087738037
+      ]
+    },
+    "entry_pose": {
+      "position": [
+        0.0,
+        0.0,
+        0.7799999713897705
+      ],
+      "target": [
+        0.0,
+        0.0,
+        -1.6200000047683716
+      ]
+    }
+  },
+  "camera_path": [
+    {
+      "time": 0.0,
+      "position": [
+        0.0,
+        0.0,
+        0.7799999713897705
+      ],
+      "target": [
+        0.0,
+        0.0,
+        -1.6200000047683716
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.09091,
+      "position": [
+        0.38999998569488525,
+        0.06930000334978104,
+        0.6754999756813049
+      ],
+      "target": [
+        -0.8098000288009644,
+        0.02669999934732914,
+        -1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.18182,
+      "position": [
+        0.6754999756813049,
+        0.06930000334978104,
+        0.38999998569488525
+      ],
+      "target": [
+        -1.4026000499725342,
+        0.02669999934732914,
+        -0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.27273,
+      "position": [
+        0.7799999713897705,
+        0.0,
+        0.0
+      ],
+      "target": [
+        -1.6200000047683716,
+        0.0,
+        -0.0
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.36364,
+      "position": [
+        0.6754999756813049,
+        -0.06930000334978104,
+        -0.38999998569488525
+      ],
+      "target": [
+        -1.4026000499725342,
+        -0.02669999934732914,
+        0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.45455,
+      "position": [
+        0.38999998569488525,
+        -0.06930000334978104,
+        -0.6754999756813049
+      ],
+      "target": [
+        -0.8098000288009644,
+        -0.02669999934732914,
+        1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.54545,
+      "position": [
+        0.0,
+        -0.0,
+        -0.7799999713897705
+      ],
+      "target": [
+        -0.0,
+        -0.0,
+        1.6200000047683716
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.63636,
+      "position": [
+        -0.38999998569488525,
+        0.06930000334978104,
+        -0.6754999756813049
+      ],
+      "target": [
+        0.8098000288009644,
+        0.02669999934732914,
+        1.4026000499725342
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.72727,
+      "position": [
+        -0.6754999756813049,
+        0.06930000334978104,
+        -0.38999998569488525
+      ],
+      "target": [
+        1.4026000499725342,
+        0.02669999934732914,
+        0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.81818,
+      "position": [
+        -0.7799999713897705,
+        0.0,
+        -0.0
+      ],
+      "target": [
+        1.6200000047683716,
+        0.0,
+        0.0
+      ],
+      "fov": 58
+    },
+    {
+      "time": 0.90909,
+      "position": [
+        -0.6754999756813049,
+        -0.06930000334978104,
+        0.38999998569488525
+      ],
+      "target": [
+        1.4026000499725342,
+        -0.02669999934732914,
+        -0.8098000288009644
+      ],
+      "fov": 58
+    },
+    {
+      "time": 1.0,
+      "position": [
+        -0.38999998569488525,
+        -0.06930000334978104,
+        0.6754999756813049
+      ],
+      "target": [
+        0.8098000288009644,
+        -0.02669999934732914,
+        -1.4026000499725342
+      ],
+      "fov": 58
+    }
+  ],
+  "quality": {
+    "status": "ready",
+    "median_relatedness": 1.0,
+    "frames": [
+      {
+        "file": "atrium-000.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 146.35,
+        "exposure": 0.293
+      },
+      {
+        "file": "atrium-001.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 146.94,
+        "exposure": 0.294
+      },
+      {
+        "file": "atrium-002.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 148.25,
+        "exposure": 0.295
+      },
+      {
+        "file": "atrium-003.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 147.56,
+        "exposure": 0.295
+      },
+      {
+        "file": "atrium-004.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 145.56,
+        "exposure": 0.295
+      },
+      {
+        "file": "atrium-005.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 144.72,
+        "exposure": 0.293
+      },
+      {
+        "file": "atrium-006.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 144.67,
+        "exposure": 0.294
+      },
+      {
+        "file": "atrium-007.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 144.8,
+        "exposure": 0.295
+      },
+      {
+        "file": "atrium-008.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 144.01,
+        "exposure": 0.295
+      },
+      {
+        "file": "atrium-009.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 141.48,
+        "exposure": 0.294
+      },
+      {
+        "file": "atrium-010.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 139.38,
+        "exposure": 0.294
+      },
+      {
+        "file": "atrium-011.png",
+        "width": 640,
+        "height": 400,
+        "sharpness": 143.24,
+        "exposure": 0.292
+      }
+    ],
+    "warnings": [],
+    "reconstruction_mode": "surrogate-reconstruction"
+  },
+  "provenance": {
+    "pipeline": "dgsi-cpu-surrogate/0.1.0",
+    "deterministic": true,
+    "production_gaussian_optimized": false
+  }
+}
