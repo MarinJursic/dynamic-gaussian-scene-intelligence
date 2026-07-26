@@ -251,6 +251,65 @@ a:focus-visible,
   display: block;
 }
 
+.scene-loading .spatial-canvas {
+  visibility: hidden;
+}
+
+.scene-loading-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 17;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 32px;
+  background: #11100e;
+  color: #fff;
+  text-align: center;
+  cursor: wait;
+}
+
+:root[data-theme="light"] .scene-loading-cover {
+  background: #e7e1d6;
+  color: #171511;
+}
+
+.scene-loading-cover span {
+  color: var(--violet);
+  font: 650 8px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.scene-loading-cover strong {
+  margin-top: 14px;
+  font-size: clamp(20px, 2.6vw, 34px);
+  font-weight: 470;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.scene-loading-cover small {
+  margin-top: 10px;
+  color: currentColor;
+  font: 540 9px/1 var(--mono);
+  opacity: 0.6;
+}
+
+.scene-loading-cover > i {
+  width: min(300px, 60vw);
+  height: 2px;
+  margin-top: 20px;
+  overflow: hidden;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.scene-loading-cover em {
+  display: block;
+  height: 100%;
+  background: var(--violet);
+}
+
 .stage-scrim {
   pointer-events: none;
   background:
@@ -1018,45 +1077,6 @@ a:focus-visible,
   max-width: 520px;
   color: var(--muted);
   font: 500 10px/1.5 var(--mono);
-}
-
-.capture-progress {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 18;
-  width: min(360px, calc(100vw - 40px));
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px 18px;
-  padding: 18px;
-  border: 1px solid var(--line-strong);
-  background: var(--glass-deep);
-  box-shadow: var(--shadow);
-  transform: translate(-50%, -50%);
-}
-
-.capture-progress span,
-.capture-progress b {
-  font: 600 9px/1 var(--mono);
-}
-
-.capture-progress b {
-  color: var(--violet);
-}
-
-.capture-progress > i {
-  height: 2px;
-  grid-column: 1 / -1;
-  overflow: hidden;
-  background: var(--line);
-}
-
-.capture-progress em {
-  display: block;
-  height: 100%;
-  background: var(--violet);
-  transition: width 180ms ease;
 }
 
 .stage-notice {

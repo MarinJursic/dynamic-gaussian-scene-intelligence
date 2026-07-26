@@ -43,6 +43,7 @@ test("server renders the Spatial Forge application shell", async () => {
   assert.match(html, /Scene details/);
   assert.match(html, /Procedural world route/);
   assert.match(html, /Approach doorway/);
+  assert.match(html, /Loading photographic context/);
   assert.match(html, /prefers-color-scheme: light/);
   assert.doesNotMatch(html, /starter-preview|Your site is taking shape|react-loading-skeleton/i);
 });

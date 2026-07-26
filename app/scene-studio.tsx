@@ -230,7 +230,7 @@ async function completedPanoramaFromMedia(files: File[]) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas completion is unavailable");
     const first = frames[0];
-    context.filter = "blur(72px) saturate(0.86) brightness(0.82)";
+    context.filter = "saturate(0.86) brightness(0.82)";
     drawCover(context, first, first.width, first.height, -120, -120, canvas.width + 240, canvas.height + 240);
     context.filter = "none";
     const bandTop = 380;
@@ -277,8 +277,7 @@ async function completedPanoramaFromMedia(files: File[]) {
   }
 }
 
-async function continuationFromPanorama(url: string) {
-  const image = await loadImageElement(url);
+async function continuationFromPanorama() {
   const canvas = document.createElement("canvas");
   canvas.width = 4096;
   canvas.height = 2048;
@@ -296,33 +295,31 @@ async function continuationFromPanorama(url: string) {
   floor.addColorStop(1, "#171614");
   context.fillStyle = floor;
   context.fillRect(0, 1420, canvas.width, canvas.height - 1420);
-  const panelWidth = 680;
-  const panelXs = [160, 1040, 2376, 3256];
-  panelXs.forEach((x, index) => {
-    context.fillStyle = "#272521";
-    context.fillRect(x - 24, 750, panelWidth + 48, 530);
-    const sourceX = ((index * 0.21) % 0.75) * image.naturalWidth;
-    context.drawImage(
-      image,
-      sourceX,
-      image.naturalHeight * 0.22,
-      image.naturalWidth * 0.24,
-      image.naturalHeight * 0.5,
-      x,
-      774,
-      panelWidth,
-      482,
-    );
+  const alcoves = [220, 1040, 1860, 2680, 3500];
+  alcoves.forEach((x, index) => {
+    const opening = context.createLinearGradient(x, 0, x + 360, 0);
+    opening.addColorStop(0, "#393631");
+    opening.addColorStop(0.5, index === 2 ? "#121211" : "#25231f");
+    opening.addColorStop(1, "#393631");
+    context.fillStyle = opening;
+    context.fillRect(x, 720, 360, 720);
+    context.strokeStyle = "#958b7d";
+    context.lineWidth = 14;
+    context.strokeRect(x - 7, 713, 374, 734);
+    context.strokeStyle = "rgba(216,204,184,.24)";
+    context.lineWidth = 3;
+    context.strokeRect(x + 34, 760, 292, 630);
   });
-  const corridor = context.createLinearGradient(1800, 0, 2296, 0);
-  corridor.addColorStop(0, "#26231f");
-  corridor.addColorStop(0.5, "#060606");
-  corridor.addColorStop(1, "#26231f");
-  context.fillStyle = corridor;
-  context.fillRect(1770, 620, 556, 850);
-  context.strokeStyle = "#aaa092";
-  context.lineWidth = 18;
-  context.strokeRect(1760, 610, 576, 870);
+  context.fillStyle = "#777066";
+  context.fillRect(0, 1370, canvas.width, 70);
+  context.strokeStyle = "rgba(235,224,204,.18)";
+  context.lineWidth = 3;
+  for (let x = 0; x < canvas.width; x += 210) {
+    context.beginPath();
+    context.moveTo(x, 690);
+    context.lineTo(x, 1370);
+    context.stroke();
+  }
   context.fillStyle = "rgba(255,235,190,.72)";
   for (const x of [520, 1420, 2676, 3576]) {
     context.beginPath();
@@ -335,6 +332,13 @@ async function continuationFromPanorama(url: string) {
     context.beginPath();
     context.moveTo(0, y);
     context.lineTo(canvas.width, y);
+    context.stroke();
+  }
+  context.strokeStyle = "rgba(202,188,164,.15)";
+  for (let x = -400; x < canvas.width + 400; x += 320) {
+    context.beginPath();
+    context.moveTo(x, canvas.height);
+    context.lineTo(2048 + (x - 2048) * 0.22, 1438);
     context.stroke();
   }
   const blob = await new Promise<Blob>((resolve, reject) =>
@@ -476,17 +480,22 @@ export function SceneStudio() {
     }
     if (sceneClass === "completed-context") {
       const isProcedural = activeProvenance?.completion === "procedural-local";
+      const isRegisteredLayered = activeProvenance?.registration === "registered-panorama";
       return {
-        label: providerUsed
+        label: isRegisteredLayered
+          ? "Registered panorama + depth layers"
+          : providerUsed
           ? "Provider-completed context"
           : isProcedural
             ? "Local procedural completion"
             : "Deterministic completed context",
-        detail: completionDisclosure(
-          observedPercent,
-          providerUsed,
-          activeProvenance?.registration ?? "unregistered",
-        ),
+        detail: isRegisteredLayered
+          ? "Observed 360° context · feathered non-metric parallax layers"
+          : completionDisclosure(
+            observedPercent,
+            providerUsed,
+            activeProvenance?.registration ?? "unregistered",
+          ),
         tone: "completed",
       };
     }
@@ -912,10 +921,48 @@ export function SceneStudio() {
     const runtime = runtimeRef.current;
     if (!runtime) throw new Error("Viewer is not ready");
     clearProceduralWorld(runtime);
-    const textureUrls = Array.from({ length: 5 }, (_, index) =>
-      frameUrls[index % Math.max(1, frameUrls.length)] ?? fallbackUrl
-    );
-    const textures = await Promise.all(textureUrls.map((url) => new THREE.TextureLoader().loadAsync(url)));
+    const textureUrls = variant === 1
+      ? Array.from({ length: 2 }, (_, index) =>
+        frameUrls[index % Math.max(1, frameUrls.length)] ?? fallbackUrl
+      )
+      : [];
+    const textures = await Promise.all(textureUrls.map(async (url) => {
+      const image = await loadImageElement(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 640;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Layer compositing is unavailable");
+      drawCover(
+        context,
+        image,
+        image.naturalWidth,
+        image.naturalHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      context.globalCompositeOperation = "destination-in";
+      const horizontal = context.createLinearGradient(0, 0, canvas.width, 0);
+      horizontal.addColorStop(0, "rgba(255,255,255,0)");
+      horizontal.addColorStop(0.18, "rgba(255,255,255,0.82)");
+      horizontal.addColorStop(0.5, "rgba(255,255,255,1)");
+      horizontal.addColorStop(0.82, "rgba(255,255,255,0.82)");
+      horizontal.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = horizontal;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const vertical = context.createLinearGradient(0, 0, 0, canvas.height);
+      vertical.addColorStop(0, "rgba(255,255,255,0)");
+      vertical.addColorStop(0.2, "rgba(255,255,255,0.9)");
+      vertical.addColorStop(0.78, "rgba(255,255,255,0.9)");
+      vertical.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = vertical;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }));
     textures.forEach((texture) => {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = Math.min(12, runtime.renderer.capabilities.getMaxAnisotropy());
@@ -927,13 +974,15 @@ export function SceneStudio() {
       height: number,
       position: [number, number, number],
       rotation: [number, number, number],
-      tint = "#ffffff",
+      opacity = 0.94,
     ) => {
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(width, height),
         new THREE.MeshBasicMaterial({
           map: texture,
-          color: tint,
+          transparent: true,
+          opacity,
+          depthWrite: false,
           side: THREE.DoubleSide,
           toneMapped: false,
         }),
@@ -943,20 +992,41 @@ export function SceneStudio() {
       runtime.proceduralWorld.add(mesh);
       return mesh;
     };
+    const addPost = (
+      size: [number, number, number],
+      position: [number, number, number],
+      color: string,
+      opacity: number,
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(...size),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      );
+      mesh.position.set(...position);
+      runtime.proceduralWorld.add(mesh);
+    };
     if (variant === 1) {
-      addPlane(textures[0], 2.35, 1.38, [0, 0, -1.28], [0, 0, 0]);
-      addPlane(textures[1], 2.5, 1.38, [-1.18, 0, -0.08], [0, Math.PI / 2, 0]);
-      addPlane(textures[2], 2.5, 1.38, [1.18, 0, -0.08], [0, -Math.PI / 2, 0]);
-      addPlane(textures[3], 2.38, 2.5, [0, -0.69, -0.05], [-Math.PI / 2, 0, 0], "#8f887e");
-      addPlane(textures[4], 0.34, 0.72, [-0.63, -0.24, -0.48], [0, 0.12, 0]);
-      addPlane(textures[2], 0.3, 0.62, [0.68, -0.28, -0.62], [0, -0.16, 0]);
+      // Small feathered depth cards preserve a coherent photographic background.
+      // They produce measurable screen-space parallax without presenting a
+      // rectangular wall collage as recovered geometry.
+      addPlane(textures[0], 0.24, 0.46, [-0.72, -0.31, -0.95], [0, 0.14, 0], 0.72);
+      addPlane(textures[1], 0.23, 0.44, [0.74, -0.32, -1.02], [0, -0.14, 0], 0.7);
+      addPost([0.03, 0.78, 0.03], [-0.82, -0.26, -1.12], "#5d4939", 0.46);
+      addPost([0.03, 0.74, 0.03], [0.84, -0.28, -1.2], "#5d4939", 0.44);
     } else {
-      addPlane(textures[0], 1.4, 1.28, [0, 0, -1.72], [0, 0, 0], "#8f887f");
-      addPlane(textures[1], 3.2, 1.38, [-0.82, 0, -0.25], [0, Math.PI / 2.85, 0], "#8a837a");
-      addPlane(textures[2], 3.2, 1.38, [0.82, 0, -0.25], [0, -Math.PI / 2.85, 0], "#8a837a");
-      addPlane(textures[3], 1.8, 3.25, [0, -0.69, -0.38], [-Math.PI / 2, 0, 0], "#5f5a52");
-      addPlane(textures[4], 0.28, 0.82, [-0.62, -0.17, -0.86], [0, 0.08, 0]);
-      addPlane(textures[1], 0.28, 0.82, [0.62, -0.17, -1.08], [0, -0.08, 0]);
+      // Room 02 is a fully procedural corridor. Geometry echoes the rendered
+      // doorway frame without reusing or mirroring Room 01 photographs.
+      addPost([0.045, 1.12, 0.045], [-0.43, -0.06, -1.42], "#38342f", 0.7);
+      addPost([0.045, 1.12, 0.045], [0.43, -0.06, -1.42], "#38342f", 0.7);
+      addPost([0.9, 0.045, 0.045], [0, 0.48, -1.42], "#38342f", 0.7);
+      addPost([0.035, 0.86, 0.035], [-0.68, -0.19, -0.96], "#71685d", 0.48);
+      addPost([0.035, 0.86, 0.035], [0.68, -0.19, -1.08], "#71685d", 0.48);
     }
     runtime.proceduralWorld.visible = true;
   };
@@ -1279,6 +1349,11 @@ export function SceneStudio() {
     files: File[],
     usedProvider: boolean,
     capture: Awaited<ReturnType<typeof completedPanoramaFromMedia>>,
+    options: {
+      registered?: boolean;
+      title?: string;
+      example?: ExampleId;
+    } = {},
   ) => {
     const runtime = runtimeRef.current;
     if (!runtime) throw new Error("Viewer is not ready");
@@ -1292,19 +1367,21 @@ export function SceneStudio() {
     const evidence = renderedCaptureEvidence(
       capture.signatures,
       capture.renderedCaptures,
+      options.registered,
     );
     const coverage = evidence.observedPercent;
-    const summary =
-      `${evidence.unique}/${evidence.rendered} unique rendered captures` +
-      `${capture.videoFrameCount ? ` · ${capture.videoFrameCount} sampled video frames` : ""} · views unregistered`;
+    const summary = options.registered
+      ? "Registered source panorama · non-metric depth layers"
+      : `${evidence.unique}/${evidence.rendered} unique rendered captures` +
+        `${capture.videoFrameCount ? ` · ${capture.videoFrameCount} sampled video frames` : ""} · views unregistered`;
     const provenance: RoomProvenance = {
       room: 1,
       sourceLabel: files.length === 1 ? files[0].name : `${files.length} local media assets`,
       renderedCaptures: evidence.rendered,
       uniqueCaptures: evidence.unique,
       observedPercent: coverage,
-      registration: "unregistered",
-      completion: usedProvider ? "provider" : "deterministic-local",
+      registration: evidence.registration,
+      completion: options.registered ? "none" : usedProvider ? "provider" : "deterministic-local",
     };
     runtime.sceneClass = "completed-context";
     runtime.scene.background = new THREE.Color("#171715");
@@ -1325,16 +1402,16 @@ export function SceneStudio() {
     runtime.camera.updateProjectionMatrix();
     runtime.tour = "off";
     settleCamera(runtime, 0, true);
-    const title = files.length === 1
+    const title = options.title ?? (files.length === 1
       ? `${files[0].name.replace(/\.[^.]+$/, "")} · Spatial preview`
-      : `${files.length}-source spatial preview`;
+      : `${files.length}-source spatial preview`);
     setTour("off");
     setManifest(null);
     setTrainedSource(null);
     setSceneClass("completed-context");
     setSceneOrigin("completed");
     setSceneTitle(title);
-    setExampleId("procedural");
+    setExampleId(options.example ?? "procedural");
     setContextEnabled(true);
     setMode("explore");
     setNavigation("look");
@@ -1351,10 +1428,20 @@ export function SceneStudio() {
     }, capture.frameUrls, provenance);
     setProviderUsed(usedProvider);
     setProgress(100);
-    setNotice(completionDisclosure(coverage, usedProvider, "unregistered"));
+    setNotice(options.registered
+      ? "Registered panorama ready · feathered non-metric depth layers · bounded parallax"
+      : completionDisclosure(coverage, usedProvider, "unregistered"));
   };
 
-  const ingestMedia = async (files: File[]) => {
+  const ingestMedia = async (
+    files: File[],
+    options: {
+      environmentUrl?: string;
+      registered?: boolean;
+      title?: string;
+      example?: ExampleId;
+    } = {},
+  ) => {
     setIngesting(true);
     setProgress(12);
     setNotice("Building a bounded spatial preview from the selected media");
@@ -1362,9 +1449,9 @@ export function SceneStudio() {
       const capture = await completedPanoramaFromMedia(files);
       localUrlsRef.current.add(capture.panoramaUrl);
       capture.frameUrls.forEach((url) => localUrlsRef.current.add(url));
-      let panoramaUrl = capture.panoramaUrl;
+      let panoramaUrl = options.environmentUrl ?? capture.panoramaUrl;
       let usedProvider = false;
-      if (COMPLETION_API) {
+      if (COMPLETION_API && !options.environmentUrl) {
         try {
           const body = new FormData();
           files.forEach((file) => body.append("files", file));
@@ -1383,12 +1470,12 @@ export function SceneStudio() {
         }
       }
       try {
-        await activateCompletedWorld(panoramaUrl, files, usedProvider, capture);
+        await activateCompletedWorld(panoramaUrl, files, usedProvider, capture, options);
       } catch (error) {
         if (!usedProvider) throw error;
         usedProvider = false;
         panoramaUrl = capture.panoramaUrl;
-        await activateCompletedWorld(panoramaUrl, files, false, capture);
+        await activateCompletedWorld(panoramaUrl, files, false, capture, options);
         setNotice("Provider output could not be rendered · deterministic local completion loaded");
       }
     } catch (error) {
@@ -1399,6 +1486,8 @@ export function SceneStudio() {
   };
 
   const loadLayeredDemo = async () => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
     setNotice("Opening the built-in layered capture study");
     try {
       const files = await Promise.all(
@@ -1414,16 +1503,13 @@ export function SceneStudio() {
           );
         }),
       );
-      await ingestMedia(files);
       const title = "Guesthouse · Layered capture study";
-      observedRoomRef.current = { ...observedRoomRef.current, title };
-      setSceneTitle(title);
-      setExampleId("layered");
-      setRoomRecords((records) => ({
-        ...records,
-        room1: { ...records.room1, sourceLabel: "8 rendered guesthouse directions" },
-      }));
-      setNotice("Layered non-metric room · move with WASD to see source-driven parallax");
+      await ingestMedia(files, {
+        environmentUrl: contextUrlForRenderer(runtime.renderer),
+        registered: true,
+        title,
+        example: "layered",
+      });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The layered demo could not be loaded");
     }
@@ -1495,7 +1581,7 @@ export function SceneStudio() {
         }
       }
       if (!continuationUrl) {
-        continuationUrl = await continuationFromPanorama(roomUrlsRef.current.observed);
+        continuationUrl = await continuationFromPanorama();
         localUrlsRef.current.add(continuationUrl);
       }
       roomUrlsRef.current.continuation = continuationUrl;
@@ -1743,7 +1829,7 @@ export function SceneStudio() {
 
       <section
         ref={stageRef}
-        className={`spatial-stage mode-${mode} ${dropActive ? "drop-active" : ""}`}
+        className={`spatial-stage mode-${mode} ${dropActive ? "drop-active" : ""} ${ingesting || progress < 100 ? "scene-loading" : ""}`}
         id="studio"
         aria-label="Interactive spatial scene"
         aria-describedby={`camera-instructions${canWalk ? "" : " translation-lock-note"}`}
@@ -1771,6 +1857,14 @@ export function SceneStudio() {
         }}
       >
         <div ref={mountRef} className="spatial-canvas" />
+        {(ingesting || progress < 100) && (
+          <div className="scene-loading-cover" role="status" aria-live="polite">
+            <span>Spatial Forge</span>
+            <strong>{ingesting ? "Preparing coherent room geometry" : "Loading photographic context"}</strong>
+            <small>{Math.max(0, progress)}% ready</small>
+            <i><em style={{ width: `${Math.max(3, progress)}%` }} /></i>
+          </div>
+        )}
         <div className="stage-scrim" aria-hidden="true" />
 
         <div className="scene-heading">
@@ -2145,7 +2239,6 @@ export function SceneStudio() {
         )}
 
         {dropActive && <div className="capture-drop"><strong>Drop images, video, or a trained SPZ/SOG</strong><span>Media becomes an on-device bounded preview with explicit completion labels. SPZ/SOG opens as trained Gaussian data.</span></div>}
-        {progress < 100 && <div className="capture-progress"><span>Opening spatial record</span><b>{progress}%</b><i><em style={{ width: `${progress}%` }} /></i></div>}
         <div className="stage-notice" role="status" aria-live="polite">{notice}</div>
       </section>
 

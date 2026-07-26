@@ -93,6 +93,10 @@ test("viewer contract distinguishes photographic context, proxy points, and true
   assert.match(source, /buildProceduralRoom/);
   assert.match(source, /loadLayeredDemo/);
   assert.match(source, /new THREE\.PlaneGeometry/);
+  assert.match(source, /globalCompositeOperation = "destination-in"/);
+  assert.match(source, /Room 02 is a fully procedural corridor/);
+  assert.match(source, /scene-loading-cover/);
+  assert.doesNotMatch(source, /blur\(72px\)/);
   assert.match(source, /roomLayerUrlsRef/);
   assert.match(source, /RoomProvenance/);
   assert.match(source, /roomAfterPortalAction\(activeRoom, "enter", portalPhase\)/);
@@ -147,6 +151,8 @@ test("viewer styles preserve accessible controls in narrow and reduced-motion la
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /\.portal-gate/);
   assert.match(styles, /\.world-route/);
+  assert.match(styles, /\.scene-loading \.spatial-canvas\s*\{[\s\S]*visibility: hidden/);
+  assert.match(styles, /\.scene-loading-cover/);
 });
 
 test("CPU pipeline declares generated media proxies non-metric and non-navigable", async () => {

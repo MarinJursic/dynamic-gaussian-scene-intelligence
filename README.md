@@ -15,9 +15,12 @@ Gaussian scales, rotations, opacity, and spherical harmonics through
 
 The built-in completion path is deterministic and runs on-device. It builds a
 4K equirectangular context from image/video frames, completes unsupported
-directions without black regions, and places source-driven wall, floor, and
-foreground planes inside that background. Those planes provide clearly visible
-limited motion parallax while remaining labeled as **non-metric local fill**.
+directions without black regions, and places source-driven foreground depth
+elements plus restrained architectural posts inside that background. The photographic layers use
+alpha-feathered edges and stay outside the primary sightline, producing limited
+motion parallax without rectangular collage seams. The stage remains behind a
+solid loading surface until both the context and depth elements are ready.
+Everything remains labeled as **non-metric local fill**.
 An optional provider seam can supply model-generated panoramas, but the
 interface still labels those pixels as provider-completed rather than observed.
 
@@ -40,7 +43,7 @@ concept images.
    across each video.
 3. The observed frames are arranged inside a complete 4096×2048 environment while
    unsupported directions receive deterministic context fill. Up to eight rendered
-   captures also texture layered walls, a floor, and foreground depth cards.
+   captures also texture small alpha-feathered foreground depth cards.
 4. A perceptual signature collapses repeated rendered captures. The scene record
    reports rendered/unique counts, a conservative source-footprint percentage,
    completion method, unknown-pose registration state, and non-metric geometry.
@@ -49,8 +52,9 @@ concept images.
 6. At the threshold, the next room is blocked until **Generate beyond doorway**
    completes its four explicit stages.
 7. Choose **Enter Room 02** to stream the completed continuation into a new bounded
-   navigation cell. The local fallback is a structurally distinct gallery/corridor,
-   not a mirrored or color-shifted Room 01. **Return to Room 01** restores its own
+   navigation cell. The local fallback is a structurally distinct procedural
+   gallery/corridor with architectural wall, floor, ceiling, doorway, and lighting
+   cues—no mirrored Room 01 photographs. **Return to Room 01** restores its own
    independent evidence record and layered geometry.
 
 This workflow is intentionally not described as single-image 3DGS reconstruction.
@@ -222,8 +226,8 @@ batch. The default browser path:
    captures, and collapses repeated visual evidence;
 5. reports unknown-pose images as **unregistered**, never as trustworthy angular
    coverage;
-6. textures non-metric wall, floor, and foreground planes to provide perceptible
-   bounded parallax in front of the no-void context sphere;
+6. textures small non-metric foreground depth elements to provide perceptible
+   bounded parallax in front of the no-void context sphere without wall-sized seams;
 7. keeps every completion and doorway-generated room explicitly labeled non-metric.
 
 The optional Python worker still creates deterministic DGSI/PLY inspection
