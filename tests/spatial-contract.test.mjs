@@ -92,7 +92,7 @@ test("viewer contract distinguishes photographic context, proxy points, and true
   assert.match(source, /renderedCaptureEvidence/);
   assert.match(source, /buildProceduralRoom/);
   assert.match(source, /loadLayeredDemo/);
-  assert.match(source, /new THREE\.PlaneGeometry/);
+  assert.match(source, /new THREE\.BoxGeometry/);
   assert.match(source, /globalCompositeOperation = "destination-in"/);
   assert.match(source, /Room 02 is a fully procedural corridor/);
   assert.match(source, /scene-loading-cover/);

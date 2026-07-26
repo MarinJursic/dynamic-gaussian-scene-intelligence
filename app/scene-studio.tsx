@@ -968,30 +968,6 @@ export function SceneStudio() {
       texture.anisotropy = Math.min(12, runtime.renderer.capabilities.getMaxAnisotropy());
     });
     runtime.proceduralTextures = textures;
-    const addPlane = (
-      texture: THREE.Texture,
-      width: number,
-      height: number,
-      position: [number, number, number],
-      rotation: [number, number, number],
-      opacity = 0.94,
-    ) => {
-      const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(width, height),
-        new THREE.MeshBasicMaterial({
-          map: texture,
-          transparent: true,
-          opacity,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-          toneMapped: false,
-        }),
-      );
-      mesh.position.set(...position);
-      mesh.rotation.set(...rotation);
-      runtime.proceduralWorld.add(mesh);
-      return mesh;
-    };
     const addPost = (
       size: [number, number, number],
       position: [number, number, number],
