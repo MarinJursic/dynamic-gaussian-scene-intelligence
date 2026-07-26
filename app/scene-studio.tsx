@@ -15,13 +15,24 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { decodeDgsi, SceneManifest, validateManifest } from "./scene-format";
 import { dampedCameraValue, lookAroundYaw, normalizedTourProgress } from "./spatial-motion";
+import {
+  completionDisclosure,
+  GENERATION_STEPS,
+  nextPortalPhase,
+  PortalPhase,
+  renderedCaptureEvidence,
+  roomAfterPortalAction,
+  RoomProvenance,
+  roomProvenanceLabel,
+  videoSampleFractions,
+} from "./procedural-world";
 
 type Theme = "dark" | "light";
 type ViewMode = "explore" | "source" | "coverage" | "inspect";
 type Navigation = "look" | "walk";
-type SceneClass = "panorama-context" | "preview-proxy" | "imported-gaussian";
-type SceneOrigin = "eso" | "generated" | "spz";
-type ExampleId = "eso" | "kitchen" | "custom";
+type SceneClass = "panorama-context" | "completed-context" | "preview-proxy" | "imported-gaussian";
+type SceneOrigin = "eso" | "completed" | "generated" | "spz";
+type ExampleId = "eso" | "layered" | "kitchen" | "procedural" | "custom";
 
 type Runtime = {
   renderer: THREE.WebGLRenderer;
@@ -34,6 +45,8 @@ type Runtime = {
   proxyGeometry: THREE.BufferGeometry;
   environment: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   environmentTexture: THREE.Texture | null;
+  proceduralWorld: THREE.Group;
+  proceduralTextures: THREE.Texture[];
   yaw: number;
   pitch: number;
   desiredYaw: number;
@@ -60,13 +73,14 @@ type Runtime = {
   scratchForward: THREE.Vector3;
   scratchRight: THREE.Vector3;
   scratchMove: THREE.Vector3;
+  portalNear: boolean;
 };
 
 const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const DEFAULT_MANIFEST = `${PUBLIC_BASE_PATH}/room-demo/manifest.json`;
 const CONTEXT_4K_URL = `${PUBLIC_BASE_PATH}/captures/eso-guesthouse/context-webgl.jpg`;
 const CONTEXT_8K_URL = `${PUBLIC_BASE_PATH}/captures/eso-guesthouse/context-8k.jpg`;
-const API_BASE = process.env.NEXT_PUBLIC_DGSI_API_URL ?? "http://127.0.0.1:8016";
+const COMPLETION_API = process.env.NEXT_PUBLIC_WORLD_COMPLETION_API_URL ?? "";
 const SOURCE_VIEWS = ["000", "030", "060", "090", "120", "150", "180", "210", "240", "270", "300", "330"];
 const MAX_LOOK_PITCH = THREE.MathUtils.degToRad(89);
 
@@ -84,6 +98,250 @@ const VIEW_LABELS: Record<ViewMode, string> = {
   coverage: "Coverage",
   inspect: "Point proxy",
 };
+
+function loadImageElement(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("The source image could not be decoded"));
+    image.src = url;
+  });
+}
+
+async function bitmapSignature(bitmap: ImageBitmap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 16;
+  canvas.height = 16;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Canvas evidence analysis is unavailable");
+  context.drawImage(bitmap, 0, 0, 16, 16);
+  const pixels = context.getImageData(0, 0, 16, 16).data;
+  const luminance = Array.from({ length: 256 }, (_, index) => {
+    const offset = index * 4;
+    return pixels[offset] * 0.299 + pixels[offset + 1] * 0.587 + pixels[offset + 2] * 0.114;
+  });
+  const mean = luminance.reduce((sum, value) => sum + value, 0) / luminance.length;
+  return luminance.map((value) => value >= mean ? "1" : "0").join("");
+}
+
+async function bitmapPreviewUrl(bitmap: ImageBitmap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 800;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas texture generation is unavailable");
+  drawCover(context, bitmap, bitmap.width, bitmap.height, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Layer texture generation failed")), "image/jpeg", 0.9),
+  );
+  return URL.createObjectURL(blob);
+}
+
+async function framesFromMedia(file: File) {
+  if (file.type.startsWith("image/")) return [await createImageBitmap(file)];
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error(`${file.name} could not be decoded`));
+    });
+    const duration = Number.isFinite(video.duration) && video.duration > 0
+      ? video.duration
+      : 1;
+    const sampleFractions = videoSampleFractions(duration);
+    const frames: ImageBitmap[] = [];
+    for (const fraction of sampleFractions) {
+      const target = Math.min(Math.max(0, duration * fraction), Math.max(0, duration - 0.04));
+      if (Math.abs(video.currentTime - target) > 0.01) {
+        video.currentTime = target;
+        await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, 1200);
+          video.addEventListener("seeked", () => {
+            window.clearTimeout(timeout);
+            resolve();
+          }, { once: true });
+        });
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, video.videoWidth);
+      canvas.height = Math.max(1, video.videoHeight);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas completion is unavailable");
+      context.drawImage(video, 0, 0);
+      frames.push(await createImageBitmap(canvas));
+    }
+    return frames;
+  } finally {
+    URL.revokeObjectURL(url);
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
+function drawCover(
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  sourceWidth: number,
+  sourceHeight: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const cropWidth = width / scale;
+  const cropHeight = height / scale;
+  const sourceX = (sourceWidth - cropWidth) / 2;
+  const sourceY = (sourceHeight - cropHeight) / 2;
+  context.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, x, y, width, height);
+}
+
+async function completedPanoramaFromMedia(files: File[]) {
+  const supported = files
+    .filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
+    .slice(0, 8);
+  if (!supported.length) throw new Error("Choose at least one image or video");
+  const framesByAsset = await Promise.all(supported.map(framesFromMedia));
+  const frames: ImageBitmap[] = [];
+  for (let sample = 0; frames.length < 8; sample += 1) {
+    let added = false;
+    for (const assetFrames of framesByAsset) {
+      if (assetFrames[sample] && frames.length < 8) {
+        frames.push(assetFrames[sample]);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  const unusedFrames = framesByAsset.flat().filter((frame) => !frames.includes(frame));
+  unusedFrames.forEach((frame) => frame.close());
+  try {
+    const signatures = await Promise.all(frames.map(bitmapSignature));
+    const frameUrls = await Promise.all(frames.map(bitmapPreviewUrl));
+    const canvas = document.createElement("canvas");
+    canvas.width = 4096;
+    canvas.height = 2048;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas completion is unavailable");
+    const first = frames[0];
+    context.filter = "blur(72px) saturate(0.86) brightness(0.82)";
+    drawCover(context, first, first.width, first.height, -120, -120, canvas.width + 240, canvas.height + 240);
+    context.filter = "none";
+    const bandTop = 380;
+    const bandHeight = 1288;
+    const segmentWidth = canvas.width / frames.length;
+    frames.forEach((frame, index) => {
+      drawCover(
+        context,
+        frame,
+        frame.width,
+        frame.height,
+        index * segmentWidth,
+        bandTop,
+        segmentWidth + 2,
+        bandHeight,
+      );
+    });
+    const topFade = context.createLinearGradient(0, 0, 0, bandTop + 220);
+    topFade.addColorStop(0, "rgba(25,22,20,.48)");
+    topFade.addColorStop(1, "rgba(25,22,20,0)");
+    context.fillStyle = topFade;
+    context.fillRect(0, 0, canvas.width, bandTop + 220);
+    const floorFade = context.createLinearGradient(0, bandTop + bandHeight - 180, 0, canvas.height);
+    floorFade.addColorStop(0, "rgba(20,18,16,0)");
+    floorFade.addColorStop(1, "rgba(20,18,16,.46)");
+    context.fillStyle = floorFade;
+    context.fillRect(0, bandTop + bandHeight - 180, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Context completion failed")), "image/jpeg", 0.9),
+    );
+    return {
+      panoramaUrl: URL.createObjectURL(blob),
+      frameUrls,
+      signatures,
+      renderedCaptures: frames.length,
+      videoFrameCount: supported.some((file) => file.type.startsWith("video/"))
+        ? framesByAsset
+          .filter((_, index) => supported[index].type.startsWith("video/"))
+          .reduce((sum, items) => sum + items.filter((item) => frames.includes(item)).length, 0)
+        : 0,
+    };
+  } finally {
+    frames.forEach((frame) => frame.close());
+  }
+}
+
+async function continuationFromPanorama(url: string) {
+  const image = await loadImageElement(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = 4096;
+  canvas.height = 2048;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas completion is unavailable");
+  const ceiling = context.createLinearGradient(0, 0, 0, 680);
+  ceiling.addColorStop(0, "#bdb6aa");
+  ceiling.addColorStop(1, "#766f65");
+  context.fillStyle = ceiling;
+  context.fillRect(0, 0, canvas.width, 680);
+  context.fillStyle = "#625d55";
+  context.fillRect(0, 680, canvas.width, 760);
+  const floor = context.createLinearGradient(0, 1420, 0, canvas.height);
+  floor.addColorStop(0, "#4b443c");
+  floor.addColorStop(1, "#171614");
+  context.fillStyle = floor;
+  context.fillRect(0, 1420, canvas.width, canvas.height - 1420);
+  const panelWidth = 680;
+  const panelXs = [160, 1040, 2376, 3256];
+  panelXs.forEach((x, index) => {
+    context.fillStyle = "#272521";
+    context.fillRect(x - 24, 750, panelWidth + 48, 530);
+    const sourceX = ((index * 0.21) % 0.75) * image.naturalWidth;
+    context.drawImage(
+      image,
+      sourceX,
+      image.naturalHeight * 0.22,
+      image.naturalWidth * 0.24,
+      image.naturalHeight * 0.5,
+      x,
+      774,
+      panelWidth,
+      482,
+    );
+  });
+  const corridor = context.createLinearGradient(1800, 0, 2296, 0);
+  corridor.addColorStop(0, "#26231f");
+  corridor.addColorStop(0.5, "#060606");
+  corridor.addColorStop(1, "#26231f");
+  context.fillStyle = corridor;
+  context.fillRect(1770, 620, 556, 850);
+  context.strokeStyle = "#aaa092";
+  context.lineWidth = 18;
+  context.strokeRect(1760, 610, 576, 870);
+  context.fillStyle = "rgba(255,235,190,.72)";
+  for (const x of [520, 1420, 2676, 3576]) {
+    context.beginPath();
+    context.ellipse(x, 310, 44, 18, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.strokeStyle = "rgba(202,188,164,.22)";
+  context.lineWidth = 3;
+  for (let y = 1510; y < canvas.height; y += 92) {
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(canvas.width, y);
+    context.stroke();
+  }
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Continuation completion failed")), "image/jpeg", 0.91),
+  );
+  return URL.createObjectURL(blob);
+}
 
 function updateLookCamera(runtime: Runtime) {
   runtime.pitch = THREE.MathUtils.clamp(runtime.pitch, -MAX_LOOK_PITCH, MAX_LOOK_PITCH);
@@ -119,9 +377,36 @@ function disposeObject(object: THREE.Object3D) {
 
 export function SceneStudio() {
   const mountRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
   const runtimeRef = useRef<Runtime | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inspectorTriggerRef = useRef<HTMLButtonElement>(null);
+  const doorwayTriggerRef = useRef<HTMLButtonElement>(null);
+  const portalDialogRef = useRef<HTMLElement>(null);
+  const portalPrimaryRef = useRef<HTMLButtonElement>(null);
+  const portalReturnFocusRef = useRef<HTMLElement | null>(null);
+  const localUrlsRef = useRef<Set<string>>(new Set());
+  const roomUrlsRef = useRef<{ observed: string; continuation: string | null }>({
+    observed: CONTEXT_8K_URL,
+    continuation: null,
+  });
+  const roomLayerUrlsRef = useRef<{ observed: string[]; continuation: string[] }>({
+    observed: [],
+    continuation: [],
+  });
+  const observedRoomRef = useRef<{
+    title: string;
+    origin: "eso" | "completed";
+    sceneClass: "panorama-context" | "completed-context";
+    coverage: number;
+    summary: string;
+  }>({
+    title: "ESO Guesthouse · Vitacura",
+    origin: "eso",
+    sceneClass: "panorama-context",
+    coverage: 100,
+    summary: "12 observed directions",
+  });
   const [theme, setTheme] = useState<Theme>("dark");
   const [mode, setMode] = useState<ViewMode>("explore");
   const [navigation, setNavigation] = useState<Navigation>("look");
@@ -149,6 +434,30 @@ export function SceneStudio() {
   const [ingesting, setIngesting] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [portalPhase, setPortalPhase] = useState<PortalPhase>("idle");
+  const [portalGateOpen, setPortalGateOpen] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
+  const [activeRoom, setActiveRoom] = useState<1 | 2>(1);
+  const [observedPercent, setObservedPercent] = useState(100);
+  const [roomOneObservedPercent, setRoomOneObservedPercent] = useState(100);
+  const [providerUsed, setProviderUsed] = useState(false);
+  const [captureSummary, setCaptureSummary] = useState("12 observed directions");
+  const [roomRecords, setRoomRecords] = useState<{
+    room1: RoomProvenance;
+    room2: RoomProvenance | null;
+  }>({
+    room1: {
+      room: 1,
+      sourceLabel: "ESO Guesthouse panorama",
+      renderedCaptures: 12,
+      uniqueCaptures: 12,
+      observedPercent: 100,
+      registration: "registered-panorama",
+      completion: "none",
+    },
+    room2: null,
+  });
+  const activeProvenance = activeRoom === 1 ? roomRecords.room1 : roomRecords.room2;
 
   const classification = useMemo(() => {
     if (sceneClass === "imported-gaussian") {
@@ -165,12 +474,28 @@ export function SceneStudio() {
         tone: "warning",
       };
     }
+    if (sceneClass === "completed-context") {
+      const isProcedural = activeProvenance?.completion === "procedural-local";
+      return {
+        label: providerUsed
+          ? "Provider-completed context"
+          : isProcedural
+            ? "Local procedural completion"
+            : "Deterministic completed context",
+        detail: completionDisclosure(
+          observedPercent,
+          providerUsed,
+          activeProvenance?.registration ?? "unregistered",
+        ),
+        tone: "completed",
+      };
+    }
     return {
       label: "360° photographic capture",
       detail: "Observed ESO panorama · context projection · not trained 3DGS",
       tone: "observed",
     };
-  }, [sceneClass]);
+  }, [activeProvenance, observedPercent, providerUsed, sceneClass]);
   const availableViewModes: ViewMode[] = sceneOrigin === "eso"
     ? ["explore", "source", "coverage", "inspect"]
     : ["explore"];
@@ -238,8 +563,17 @@ export function SceneStudio() {
   }, []);
 
   useEffect(() => {
+    if (!portalGateOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      (portalPrimaryRef.current ?? portalDialogRef.current)?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [portalGateOpen, portalPhase]);
+
+  useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    const localUrls = localUrlsRef.current;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#080908");
@@ -267,6 +601,9 @@ export function SceneStudio() {
       new THREE.MeshBasicMaterial({ side: THREE.BackSide, toneMapped: false }),
     );
     scene.add(environment);
+    const proceduralWorld = new THREE.Group();
+    proceduralWorld.visible = false;
+    scene.add(proceduralWorld);
 
     const proxyGeometry = new THREE.BufferGeometry();
     const proxy = new THREE.Points(
@@ -285,6 +622,7 @@ export function SceneStudio() {
     const runtime: Runtime = {
       renderer, scene, camera, spark, splat: null, splatUrl: null,
       proxy, proxyGeometry, environment, environmentTexture: null,
+      proceduralWorld, proceduralTextures: [],
       yaw: 0, pitch: 0, desiredYaw: 0, desiredPitch: 0,
       walkPosition: new THREE.Vector3(), entryPosition: new THREE.Vector3(),
       safeMin: new THREE.Vector3(-0.42, -0.18, -0.54),
@@ -295,6 +633,7 @@ export function SceneStudio() {
       tourBaseYaw: 0, tourStart: 0, tourDuration: 12000, lastTime: performance.now(),
       scratchDirection: new THREE.Vector3(), scratchForward: new THREE.Vector3(),
       scratchRight: new THREE.Vector3(), scratchMove: new THREE.Vector3(),
+      portalNear: false,
     };
     runtimeRef.current = runtime;
     updateLookCamera(runtime);
@@ -440,6 +779,20 @@ export function SceneStudio() {
           runtime.walkPosition.add(move.normalize().multiplyScalar(delta * runtime.moveSpeed * boost));
           runtime.walkPosition.clamp(runtime.safeMin, runtime.safeMax);
           updateLookCamera(runtime);
+          const atThreshold =
+            runtime.sceneClass !== "imported-gaussian" &&
+            runtime.walkPosition.z <= runtime.safeMin.z + 0.045 &&
+            Math.abs(runtime.walkPosition.x) <= 0.19;
+          if (atThreshold && !runtime.portalNear) {
+            runtime.portalNear = true;
+            setPortalPhase((phase) => nextPortalPhase(phase, "approach"));
+            portalReturnFocusRef.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : stageRef.current;
+            setPortalGateOpen(true);
+            setNotice("Unmapped threshold reached · generate the next bounded room before entering");
+          } else if (!atThreshold) {
+            runtime.portalNear = false;
+          }
         }
       }
       renderer.render(scene, camera);
@@ -467,6 +820,8 @@ export function SceneStudio() {
       renderer.dispose();
       renderer.forceContextLoss();
       mount.removeChild(renderer.domElement);
+      localUrls.forEach((url) => URL.revokeObjectURL(url));
+      localUrls.clear();
       runtimeRef.current = null;
     };
   }, []);
@@ -525,6 +880,115 @@ export function SceneStudio() {
     setNotice("Stable full-resolution 360° look-around · one continuous revolution");
   };
 
+  const installEnvironment = async (url: string) => {
+    const runtime = runtimeRef.current;
+    if (!runtime) throw new Error("Viewer is not ready");
+    const texture = await new THREE.TextureLoader().loadAsync(url);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.repeat.x = -1;
+    texture.offset.x = 1;
+    texture.anisotropy = Math.min(16, runtime.renderer.capabilities.getMaxAnisotropy());
+    runtime.environmentTexture?.dispose();
+    runtime.environmentTexture = texture;
+    runtime.environment.material.map = texture;
+    runtime.environment.material.needsUpdate = true;
+    runtime.environment.visible = true;
+  };
+
+  const clearProceduralWorld = (runtime: Runtime) => {
+    runtime.proceduralWorld.children.forEach((child) => disposeObject(child));
+    runtime.proceduralWorld.clear();
+    runtime.proceduralTextures.forEach((texture) => texture.dispose());
+    runtime.proceduralTextures = [];
+    runtime.proceduralWorld.visible = false;
+  };
+
+  const buildProceduralRoom = async (
+    frameUrls: string[],
+    fallbackUrl: string,
+    variant: 1 | 2,
+  ) => {
+    const runtime = runtimeRef.current;
+    if (!runtime) throw new Error("Viewer is not ready");
+    clearProceduralWorld(runtime);
+    const textureUrls = Array.from({ length: 5 }, (_, index) =>
+      frameUrls[index % Math.max(1, frameUrls.length)] ?? fallbackUrl
+    );
+    const textures = await Promise.all(textureUrls.map((url) => new THREE.TextureLoader().loadAsync(url)));
+    textures.forEach((texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(12, runtime.renderer.capabilities.getMaxAnisotropy());
+    });
+    runtime.proceduralTextures = textures;
+    const addPlane = (
+      texture: THREE.Texture,
+      width: number,
+      height: number,
+      position: [number, number, number],
+      rotation: [number, number, number],
+      tint = "#ffffff",
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshBasicMaterial({
+          map: texture,
+          color: tint,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        }),
+      );
+      mesh.position.set(...position);
+      mesh.rotation.set(...rotation);
+      runtime.proceduralWorld.add(mesh);
+      return mesh;
+    };
+    if (variant === 1) {
+      addPlane(textures[0], 2.35, 1.38, [0, 0, -1.28], [0, 0, 0]);
+      addPlane(textures[1], 2.5, 1.38, [-1.18, 0, -0.08], [0, Math.PI / 2, 0]);
+      addPlane(textures[2], 2.5, 1.38, [1.18, 0, -0.08], [0, -Math.PI / 2, 0]);
+      addPlane(textures[3], 2.38, 2.5, [0, -0.69, -0.05], [-Math.PI / 2, 0, 0], "#8f887e");
+      addPlane(textures[4], 0.34, 0.72, [-0.63, -0.24, -0.48], [0, 0.12, 0]);
+      addPlane(textures[2], 0.3, 0.62, [0.68, -0.28, -0.62], [0, -0.16, 0]);
+    } else {
+      addPlane(textures[0], 1.4, 1.28, [0, 0, -1.72], [0, 0, 0], "#8f887f");
+      addPlane(textures[1], 3.2, 1.38, [-0.82, 0, -0.25], [0, Math.PI / 2.85, 0], "#8a837a");
+      addPlane(textures[2], 3.2, 1.38, [0.82, 0, -0.25], [0, -Math.PI / 2.85, 0], "#8a837a");
+      addPlane(textures[3], 1.8, 3.25, [0, -0.69, -0.38], [-Math.PI / 2, 0, 0], "#5f5a52");
+      addPlane(textures[4], 0.28, 0.82, [-0.62, -0.17, -0.86], [0, 0.08, 0]);
+      addPlane(textures[1], 0.28, 0.82, [0.62, -0.17, -1.08], [0, -0.08, 0]);
+    }
+    runtime.proceduralWorld.visible = true;
+  };
+
+  const resetWorldExpansion = (
+    observedUrl: string,
+    coverage = 100,
+    metadata = observedRoomRef.current,
+    layerUrls: string[] = [],
+    provenance: RoomProvenance = {
+      room: 1,
+      sourceLabel: metadata.summary,
+      renderedCaptures: coverage === 100 ? 12 : 0,
+      uniqueCaptures: coverage === 100 ? 12 : 0,
+      observedPercent: coverage,
+      registration: coverage === 100 ? "registered-panorama" : "unregistered",
+      completion: coverage === 100 ? "none" : "deterministic-local",
+    },
+  ) => {
+    roomUrlsRef.current = { observed: observedUrl, continuation: null };
+    roomLayerUrlsRef.current = { observed: layerUrls, continuation: [] };
+    observedRoomRef.current = { ...metadata, coverage };
+    setPortalPhase("idle");
+    setPortalGateOpen(false);
+    setGenerationStep(0);
+    setActiveRoom(1);
+    setObservedPercent(coverage);
+    setRoomOneObservedPercent(coverage);
+    setProviderUsed(false);
+    setRoomRecords({ room1: provenance, room2: null });
+  };
+
   const loadProxyScene = async (sceneUrl: string, origin: "eso" | "generated" = "generated") => {
     const runtime = runtimeRef.current;
     if (!runtime) return;
@@ -566,6 +1030,7 @@ export function SceneStudio() {
       runtime.environment.material.needsUpdate = true;
     }
     runtime.sceneClass = origin === "eso" ? "panorama-context" : "preview-proxy";
+    clearProceduralWorld(runtime);
     runtime.scene.background = new THREE.Color(origin === "eso" ? "#080908" : "#24211f");
     runtime.safeMin.fromArray(checked.spatial.navigable_bounds.min);
     runtime.safeMax.fromArray(checked.spatial.navigable_bounds.max);
@@ -598,6 +1063,26 @@ export function SceneStudio() {
     setMode("explore");
     setNavigation("look");
     setCanWalk(runtime.canTranslate);
+    resetWorldExpansion(
+      origin === "eso"
+        ? contextUrlForRenderer(runtime.renderer)
+        : environmentUrl ?? contextUrlForRenderer(runtime.renderer),
+      origin === "eso" ? 100 : Math.round((checked.environment?.coverage ?? 0) * 100),
+      {
+        title: origin === "eso" ? "ESO Guesthouse · Vitacura" : checked.title,
+        origin: origin === "eso" ? "eso" : "completed",
+        sceneClass: origin === "eso" ? "panorama-context" : "completed-context",
+        coverage: origin === "eso" ? 100 : Math.round((checked.environment?.coverage ?? 0) * 100),
+        summary: origin === "eso"
+          ? "12 observed directions"
+          : `${checked.source.file_count} uploaded capture file${checked.source.file_count === 1 ? "" : "s"}`,
+      },
+    );
+    setCaptureSummary(
+      origin === "eso"
+        ? "12 observed directions"
+        : `${checked.source.file_count} uploaded capture file${checked.source.file_count === 1 ? "" : "s"}`,
+    );
     setProgress(100);
     setRenderProfile(
       origin === "eso" && contextUrlForRenderer(runtime.renderer) === CONTEXT_8K_URL
@@ -663,6 +1148,7 @@ export function SceneStudio() {
       previousSplat.dispose();
     }
     runtime.sceneClass = "imported-gaussian";
+    clearProceduralWorld(runtime);
     runtime.scene.background = new THREE.Color(
       isBundledKitchen
         ? "#c8c2b9"
@@ -678,6 +1164,11 @@ export function SceneStudio() {
     setSceneTitle(title);
     setTrainedSource(source);
     setManifest(null);
+    setPortalPhase("idle");
+    setPortalGateOpen(false);
+    setGenerationStep(0);
+    setActiveRoom(1);
+    setCaptureSummary("trained Gaussian scene");
     runtime.proxy.visible = false;
     runtime.environment.visible = false;
     setContextEnabled(false);
@@ -783,34 +1274,319 @@ export function SceneStudio() {
     }
   };
 
+  const activateCompletedWorld = async (
+    url: string,
+    files: File[],
+    usedProvider: boolean,
+    capture: Awaited<ReturnType<typeof completedPanoramaFromMedia>>,
+  ) => {
+    const runtime = runtimeRef.current;
+    if (!runtime) throw new Error("Viewer is not ready");
+    if (runtime.splat) {
+      runtime.scene.remove(runtime.splat);
+      runtime.splat.dispose();
+      runtime.splat = null;
+    }
+    await installEnvironment(url);
+    await buildProceduralRoom(capture.frameUrls, url, 1);
+    const evidence = renderedCaptureEvidence(
+      capture.signatures,
+      capture.renderedCaptures,
+    );
+    const coverage = evidence.observedPercent;
+    const summary =
+      `${evidence.unique}/${evidence.rendered} unique rendered captures` +
+      `${capture.videoFrameCount ? ` · ${capture.videoFrameCount} sampled video frames` : ""} · views unregistered`;
+    const provenance: RoomProvenance = {
+      room: 1,
+      sourceLabel: files.length === 1 ? files[0].name : `${files.length} local media assets`,
+      renderedCaptures: evidence.rendered,
+      uniqueCaptures: evidence.unique,
+      observedPercent: coverage,
+      registration: "unregistered",
+      completion: usedProvider ? "provider" : "deterministic-local",
+    };
+    runtime.sceneClass = "completed-context";
+    runtime.scene.background = new THREE.Color("#171715");
+    runtime.proxy.visible = false;
+    runtime.safeMin.set(-0.38, -0.13, -0.48);
+    runtime.safeMax.set(0.38, 0.13, 0.28);
+    runtime.entryPosition.set(0, 0, 0);
+    runtime.walkPosition.copy(runtime.entryPosition);
+    runtime.moveSpeed = 0.36;
+    runtime.canTranslate = true;
+    runtime.yaw = 0;
+    runtime.pitch = 0;
+    runtime.desiredYaw = 0;
+    runtime.desiredPitch = 0;
+    runtime.camera.near = 0.02;
+    runtime.camera.far = 120;
+    runtime.camera.fov = 58;
+    runtime.camera.updateProjectionMatrix();
+    runtime.tour = "off";
+    settleCamera(runtime, 0, true);
+    const title = files.length === 1
+      ? `${files[0].name.replace(/\.[^.]+$/, "")} · Spatial preview`
+      : `${files.length}-source spatial preview`;
+    setTour("off");
+    setManifest(null);
+    setTrainedSource(null);
+    setSceneClass("completed-context");
+    setSceneOrigin("completed");
+    setSceneTitle(title);
+    setExampleId("procedural");
+    setContextEnabled(true);
+    setMode("explore");
+    setNavigation("look");
+    setCanWalk(true);
+    setRenderProfile("4K completed context");
+    setProviderUsed(usedProvider);
+    setCaptureSummary(summary);
+    resetWorldExpansion(url, coverage, {
+      title,
+      origin: "completed",
+      sceneClass: "completed-context",
+      coverage,
+      summary,
+    }, capture.frameUrls, provenance);
+    setProviderUsed(usedProvider);
+    setProgress(100);
+    setNotice(completionDisclosure(coverage, usedProvider, "unregistered"));
+  };
+
   const ingestMedia = async (files: File[]) => {
     setIngesting(true);
-    setNotice("Uploading capture to the configured reconstruction worker");
+    setProgress(12);
+    setNotice("Building a bounded spatial preview from the selected media");
     try {
-      const body = new FormData();
-      files.forEach((file) => body.append("files", file));
-      const response = await fetch(`${API_BASE}/api/ingest`, { method: "POST", body });
-      if (!response.ok) {
-        const detail = (await response.json().catch(() => ({}))) as { detail?: string };
-        throw new Error(detail.detail ?? `Reconstruction worker returned ${response.status}`);
+      const capture = await completedPanoramaFromMedia(files);
+      localUrlsRef.current.add(capture.panoramaUrl);
+      capture.frameUrls.forEach((url) => localUrlsRef.current.add(url));
+      let panoramaUrl = capture.panoramaUrl;
+      let usedProvider = false;
+      if (COMPLETION_API) {
+        try {
+          const body = new FormData();
+          files.forEach((file) => body.append("files", file));
+          const response = await fetch(`${COMPLETION_API.replace(/\/$/, "")}/complete`, {
+            method: "POST",
+            body,
+          });
+          const result = await response.json() as { panorama_url?: string };
+          if (!response.ok || !result.panorama_url) {
+            throw new Error("Completion provider did not return a panorama");
+          }
+          panoramaUrl = result.panorama_url;
+          usedProvider = true;
+        } catch {
+          setNotice("Provider unavailable · using deterministic on-device context fill");
+        }
       }
-      const result = await response.json() as {
-        scene_url?: string;
-        quality?: { reconstruction_mode?: string };
-      };
-      if (!result.scene_url) throw new Error("Reconstruction worker did not return a scene URL");
-      await loadProxyScene(result.scene_url);
-      setNotice(
-        result.quality?.reconstruction_mode === "surrogate-reconstruction"
-          ? "Non-metric CPU review proxy loaded · rotate-only · import a trained SPZ for true Gaussian rendering"
-          : "Capture processed and loaded from the configured worker",
-      );
+      try {
+        await activateCompletedWorld(panoramaUrl, files, usedProvider, capture);
+      } catch (error) {
+        if (!usedProvider) throw error;
+        usedProvider = false;
+        panoramaUrl = capture.panoramaUrl;
+        await activateCompletedWorld(panoramaUrl, files, false, capture);
+        setNotice("Provider output could not be rendered · deterministic local completion loaded");
+      }
     } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? `${error.message}. Hosted upload requires a configured local/GPU worker.`
-          : "Hosted upload requires a configured local/GPU worker.",
+      setNotice(error instanceof Error ? error.message : "The local spatial preview could not be built");
+    } finally {
+      setIngesting(false);
+    }
+  };
+
+  const loadLayeredDemo = async () => {
+    setNotice("Opening the built-in layered capture study");
+    try {
+      const files = await Promise.all(
+        Array.from({ length: 8 }, async (_, index) => {
+          const response = await fetch(
+            `${PUBLIC_BASE_PATH}/room-inputs/room-${String(index).padStart(2, "0")}.jpg`,
+          );
+          if (!response.ok) throw new Error(`Demo view ${index + 1} could not be loaded`);
+          return new File(
+            [await response.blob()],
+            `guesthouse-view-${String(index + 1).padStart(2, "0")}.jpg`,
+            { type: "image/jpeg" },
+          );
+        }),
       );
+      await ingestMedia(files);
+      const title = "Guesthouse · Layered capture study";
+      observedRoomRef.current = { ...observedRoomRef.current, title };
+      setSceneTitle(title);
+      setExampleId("layered");
+      setRoomRecords((records) => ({
+        ...records,
+        room1: { ...records.room1, sourceLabel: "8 rendered guesthouse directions" },
+      }));
+      setNotice("Layered non-metric room · move with WASD to see source-driven parallax");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The layered demo could not be loaded");
+    }
+  };
+
+  const closePortalDialog = () => {
+    if (portalPhase === "generating") return;
+    setPortalGateOpen(false);
+    if (portalPhase === "threshold") setPortalPhase("idle");
+    setNotice(portalPhase === "ready"
+      ? "Room 02 remains ready · continue exploring Room 01"
+      : "Doorway generation cancelled · Room 01 remains active");
+    window.requestAnimationFrame(() => {
+      (portalReturnFocusRef.current ?? stageRef.current)?.focus();
+    });
+  };
+
+  const approachDoorway = () => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    portalReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : doorwayTriggerRef.current;
+    if (portalPhase === "ready") {
+      setPortalGateOpen(true);
+      setNotice("Room 02 is ready · enter when you are ready to cross");
+      return;
+    }
+    runtime.tour = "off";
+    runtime.keys.clear();
+    runtime.portalNear = true;
+    runtime.walkPosition.set(0, 0, runtime.safeMin.z + 0.035);
+    runtime.yaw = 0;
+    runtime.pitch = 0;
+    runtime.desiredYaw = 0;
+    runtime.desiredPitch = 0;
+    settleCamera(runtime, 0, true);
+    setTour("off");
+    setNavigation("look");
+    setPortalPhase((phase) => nextPortalPhase(phase, "approach"));
+    setPortalGateOpen(true);
+    setNotice("Unmapped threshold reached · generate the next bounded room before entering");
+  };
+
+  const generateBeyondDoorway = async () => {
+    if (portalPhase !== "threshold") return;
+    setPortalPhase((phase) => nextPortalPhase(phase, "generate"));
+    setGenerationStep(0);
+    try {
+      for (let index = 0; index < GENERATION_STEPS.length; index += 1) {
+        setGenerationStep(index);
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+      }
+      let continuationUrl = "";
+      let continuationProvider = false;
+      if (COMPLETION_API) {
+        try {
+          const response = await fetch(`${COMPLETION_API.replace(/\/$/, "")}/continue`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ panorama_url: roomUrlsRef.current.observed, doorway: "forward" }),
+          });
+          const result = await response.json() as { panorama_url?: string };
+          if (response.ok && result.panorama_url) {
+            continuationUrl = result.panorama_url;
+            continuationProvider = true;
+          }
+        } catch {
+          // The local continuation below remains available without a provider.
+        }
+      }
+      if (!continuationUrl) {
+        continuationUrl = await continuationFromPanorama(roomUrlsRef.current.observed);
+        localUrlsRef.current.add(continuationUrl);
+      }
+      roomUrlsRef.current.continuation = continuationUrl;
+      roomLayerUrlsRef.current.continuation = [...roomLayerUrlsRef.current.observed].reverse();
+      const room2: RoomProvenance = {
+        room: 2,
+        sourceLabel: continuationProvider
+          ? "Configured doorway-completion provider"
+          : "Local procedural gallery continuation",
+        renderedCaptures: 0,
+        uniqueCaptures: 0,
+        observedPercent: 0,
+        registration: "procedural",
+        completion: continuationProvider ? "provider" : "procedural-local",
+      };
+      setRoomRecords((records) => ({ ...records, room2 }));
+      setPortalPhase((phase) => nextPortalPhase(phase, "finish"));
+      setNotice(continuationProvider
+        ? "Room 02 is ready · provider-completed context · bounded"
+        : "Room 02 is ready · structurally distinct local procedural completion · bounded");
+    } catch (error) {
+      setPortalPhase("threshold");
+      setNotice(error instanceof Error ? error.message : "The next room could not be generated");
+    }
+  };
+
+  const enterContinuation = async () => {
+    const url = roomUrlsRef.current.continuation;
+    const runtime = runtimeRef.current;
+    if (!runtime || portalPhase !== "ready" || !url) return;
+    setIngesting(true);
+    try {
+      await installEnvironment(url);
+      await buildProceduralRoom(roomLayerUrlsRef.current.continuation, url, 2);
+      const room2 = roomRecords.room2;
+      runtime.sceneClass = "completed-context";
+      runtime.walkPosition.copy(runtime.entryPosition);
+      runtime.yaw = Math.PI;
+      runtime.pitch = 0;
+      runtime.desiredYaw = runtime.yaw;
+      runtime.desiredPitch = 0;
+      settleCamera(runtime, 0, true);
+      setSceneClass("completed-context");
+      setSceneOrigin("completed");
+      setSceneTitle("Room 02 · Generated continuation");
+      setObservedPercent(0);
+      setProviderUsed(room2?.completion === "provider");
+      setCaptureSummary(room2?.sourceLabel ?? "doorway-conditioned procedural continuation");
+      setActiveRoom(roomAfterPortalAction(activeRoom, "enter", portalPhase));
+      setPortalGateOpen(false);
+      setNotice(room2 ? roomProvenanceLabel(room2) : "Room 02 · local procedural completion · 0% observed");
+      window.requestAnimationFrame(() => stageRef.current?.focus({ preventScroll: true }));
+    } finally {
+      setIngesting(false);
+    }
+  };
+
+  const returnToObservedRoom = async () => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    setIngesting(true);
+    try {
+      await installEnvironment(roomUrlsRef.current.observed);
+      const entry = observedRoomRef.current;
+      if (entry.sceneClass === "completed-context") {
+        await buildProceduralRoom(roomLayerUrlsRef.current.observed, roomUrlsRef.current.observed, 1);
+      } else {
+        clearProceduralWorld(runtime);
+      }
+      runtime.sceneClass = entry.sceneClass;
+      runtime.walkPosition.copy(runtime.entryPosition);
+      runtime.yaw = 0;
+      runtime.pitch = 0;
+      runtime.desiredYaw = 0;
+      runtime.desiredPitch = 0;
+      settleCamera(runtime, 0, true);
+      setSceneClass(entry.sceneClass);
+      setSceneOrigin(entry.origin);
+      setSceneTitle(entry.title);
+      setObservedPercent(entry.coverage);
+      setProviderUsed(roomRecords.room1.completion === "provider");
+      setCaptureSummary(entry.summary);
+      setActiveRoom(roomAfterPortalAction(activeRoom, "return", portalPhase));
+      setPortalGateOpen(false);
+      setNotice(entry.origin === "eso"
+        ? "Returned to observed Room 01 · source-grounded 360° context"
+        : completionDisclosure(
+          entry.coverage,
+          roomRecords.room1.completion === "provider",
+          roomRecords.room1.registration,
+        ));
     } finally {
       setIngesting(false);
     }
@@ -886,6 +1662,20 @@ export function SceneStudio() {
     runtime.walkPosition.addScaledVector(direction, -event.deltaY * runtime.moveSpeed * 0.0014);
     runtime.walkPosition.clamp(runtime.safeMin, runtime.safeMax);
     updateLookCamera(runtime);
+    const atThreshold =
+      runtime.sceneClass !== "imported-gaussian" &&
+      runtime.walkPosition.z <= runtime.safeMin.z + 0.045 &&
+      Math.abs(runtime.walkPosition.x) <= 0.19;
+    if (atThreshold && !runtime.portalNear) {
+      runtime.portalNear = true;
+      setPortalPhase((phase) => nextPortalPhase(phase, "approach"));
+      portalReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : stageRef.current;
+      setPortalGateOpen(true);
+      setNotice("Unmapped threshold reached · generate the next bounded room before entering");
+    } else if (!atThreshold) {
+      runtime.portalNear = false;
+    }
   };
 
   const toggleTheme = () => {
@@ -907,9 +1697,9 @@ export function SceneStudio() {
         </p>
       )}
       <header className="capture-header">
-        <a className="capture-brand" href="#studio" aria-label="Spatial Capture Room home">
-          <span>Spatial viewer</span>
-          <strong>Capture Room</strong>
+        <a className="capture-brand" href="#studio" aria-label="Spatial Forge home">
+          <span>Image to world</span>
+          <strong>Spatial Forge</strong>
         </a>
         <div className="scene-picker">
           <span>Scene</span>
@@ -919,12 +1709,16 @@ export function SceneStudio() {
             disabled={ingesting}
             onChange={(event) => {
               const next = event.target.value as ExampleId;
+              setExampleId(next);
               if (next === "eso") void restoreEsoScene();
+              else if (next === "layered") void loadLayeredDemo();
               else if (next === "kitchen") void loadBundledGaussian();
             }}
           >
             <option value="eso">ESO photo room</option>
+            <option value="layered">Layered capture demo</option>
             <option value="kitchen">AWS kitchen SOG</option>
+            {exampleId === "procedural" && <option value="procedural">Current spatial preview</option>}
             {exampleId === "custom" && <option value="custom">Current custom scene</option>}
           </select>
           <i aria-label={`Rendering profile: ${renderProfile}`}>{renderProfile}</i>
@@ -934,7 +1728,7 @@ export function SceneStudio() {
             {theme === "dark" ? "Light" : "Dark"}
           </button>
           <button type="button" onClick={() => fileRef.current?.click()} disabled={ingesting}>
-            {ingesting ? "Opening…" : "Open capture"}
+            {ingesting ? "Building…" : "Create world"}
           </button>
           <input
             ref={fileRef}
@@ -948,6 +1742,7 @@ export function SceneStudio() {
       </header>
 
       <section
+        ref={stageRef}
         className={`spatial-stage mode-${mode} ${dropActive ? "drop-active" : ""}`}
         id="studio"
         aria-label="Interactive spatial scene"
@@ -984,7 +1779,11 @@ export function SceneStudio() {
               ? "REAL SPATIAL RECORD · VITACURA, CHILE"
               : sceneOrigin === "spz"
                 ? "TRAINED GAUSSIAN · ANISOTROPIC SPLAT SCENE"
-                : "LOCAL CAPTURE BATCH · NON-METRIC CPU REVIEW PROXY"}
+                : sceneOrigin === "completed"
+                  ? activeRoom === 1
+                    ? "BOUNDED SPATIAL PREVIEW · OBSERVED + COMPLETED CONTEXT"
+                    : "GENERATED ROOM 02 · DOORWAY-CONDITIONED CONTEXT"
+                  : "LOCAL CAPTURE BATCH · NON-METRIC CPU REVIEW PROXY"}
           </p>
           <h1>{sceneTitle}</h1>
           <div className={`classification ${classification.tone}`}>
@@ -1006,6 +1805,60 @@ export function SceneStudio() {
           <i />
           <span>{progress}% READY</span>
         </div>
+
+        {sceneClass !== "imported-gaussian" && activeProvenance && (
+          <aside className={`evidence-ribbon ${activeProvenance.registration}`} aria-label="Visible room provenance">
+            <span>Evidence in view</span>
+            <strong>{roomProvenanceLabel(activeProvenance)}</strong>
+            <small>
+              {activeProvenance.registration === "unregistered"
+                ? "Pose unknown · layers provide perceptual parallax, not measured depth"
+                : activeProvenance.registration === "procedural"
+                  ? "Structurally generated continuation · not observed"
+                  : "Source-grounded 360° context · limited translation"}
+            </small>
+          </aside>
+        )}
+
+        {sceneClass !== "imported-gaussian" && mode === "explore" && (
+          <section className="world-route" aria-label="Procedural world route">
+            <div className={`route-room ${activeRoom === 1 ? "active" : ""}`}>
+              <i aria-hidden="true" />
+              <span>Room 01</span>
+              <strong>{roomOneObservedPercent}% observed</strong>
+            </div>
+            <div className={`route-link ${portalPhase === "ready" || activeRoom === 2 ? "ready" : ""}`} aria-hidden="true" />
+            <div className={`route-room ${activeRoom === 2 ? "active" : ""} ${portalPhase === "idle" ? "pending" : ""}`}>
+              <i aria-hidden="true" />
+              <span>Room 02</span>
+              <strong>{portalPhase === "ready" || activeRoom === 2 ? "completed" : "not generated"}</strong>
+            </div>
+            {activeRoom === 1 ? (
+              <button
+                ref={doorwayTriggerRef}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  approachDoorway();
+                }}
+                disabled={portalPhase === "generating"}
+              >
+                {portalPhase === "ready" ? "Room 02 ready" : "Approach doorway"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void returnToObservedRoom();
+                }}
+                disabled={ingesting}
+              >
+                Return to Room 01
+              </button>
+            )}
+          </section>
+        )}
 
         {availableViewModes.length > 1 && (
           <nav className="view-modes" aria-label="Spatial view">
@@ -1031,6 +1884,7 @@ export function SceneStudio() {
               }
               setNavigation(next);
               setNotice(next === "walk" ? "Walk mode · WASD / arrows · Shift to move faster" : "Look mode · drag or use arrow keys to look");
+              window.requestAnimationFrame(() => stageRef.current?.focus({ preventScroll: true }));
             }}>Walk</button>
           ) : (
             <span className="camera-constraint" aria-describedby="translation-lock-note">Rotate only</span>
@@ -1103,6 +1957,92 @@ export function SceneStudio() {
           </section>
         )}
 
+        {activeRoom === 1 && portalGateOpen && portalPhase !== "idle" && sceneClass !== "imported-gaussian" && (
+          <>
+          <div
+            className="portal-backdrop"
+            aria-hidden="true"
+            onPointerDown={(event) => event.stopPropagation()}
+            onWheel={(event) => event.stopPropagation()}
+          />
+          <section
+            ref={portalDialogRef}
+            className={`portal-gate ${portalPhase}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="portal-title"
+            aria-describedby="portal-description"
+            tabIndex={-1}
+            onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && portalPhase !== "generating") {
+                event.preventDefault();
+                closePortalDialog();
+                return;
+              }
+              if (event.key !== "Tab") return;
+              const focusable = Array.from(
+                event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), [href], [tabindex]:not([tabindex='-1'])"),
+              );
+              if (!focusable.length) {
+                event.preventDefault();
+                event.currentTarget.focus();
+                return;
+              }
+              const first = focusable[0];
+              const last = focusable.at(-1)!;
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+          >
+            <span className="portal-kicker">Unmapped threshold</span>
+            <h2 id="portal-title">
+              {portalPhase === "threshold" && "The next room does not exist yet"}
+              {portalPhase === "generating" && "Generating a bounded continuation"}
+              {portalPhase === "ready" && "Room 02 is ready to enter"}
+            </h2>
+            <p id="portal-description" aria-live="polite">
+              {portalPhase === "threshold" && "Only Room 01 is currently supported. Generate context beyond this doorway before crossing."}
+              {portalPhase === "generating" && GENERATION_STEPS[generationStep]}
+              {portalPhase === "ready" && "The continuation is explicitly marked as completed context. It is explorable inside a new limited movement cell."}
+            </p>
+            {portalPhase === "generating" && (
+              <div className="portal-progress" aria-label={`Generation step ${generationStep + 1} of ${GENERATION_STEPS.length}`}>
+                {GENERATION_STEPS.map((step, index) => (
+                  <i key={step} className={index <= generationStep ? "done" : ""} />
+                ))}
+              </div>
+            )}
+            <div className="portal-actions">
+              {portalPhase === "threshold" && (
+                <button ref={portalPrimaryRef} type="button" onClick={() => void generateBeyondDoorway()}>
+                  Generate beyond doorway
+                </button>
+              )}
+              {portalPhase === "ready" && (
+                <button ref={portalPrimaryRef} type="button" onClick={() => void enterContinuation()}>
+                  Enter Room 02
+                </button>
+              )}
+              {portalPhase !== "generating" && (
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={closePortalDialog}
+                >
+                  Stay here
+                </button>
+              )}
+            </div>
+          </section>
+          </>
+        )}
+
         {inspectorOpen && (
           <aside
             id="scene-inspector"
@@ -1129,7 +2069,9 @@ export function SceneStudio() {
                     ? "ESO · gh-livingroom-pan"
                     : sceneOrigin === "spz"
                       ? trainedSource?.label ?? "Local file · metadata not embedded"
-                      : `${manifest?.source.file_count ?? 0} uploaded capture files`}
+                      : sceneOrigin === "completed"
+                        ? captureSummary
+                        : `${manifest?.source.file_count ?? 0} uploaded capture files`}
                 </dd>
               </div>
               <div>
@@ -1141,22 +2083,45 @@ export function SceneStudio() {
                 <dd>
                   {sceneOrigin === "spz"
                     ? "Anisotropic 3D Gaussians"
+                    : sceneOrigin === "completed"
+                      ? "Completed equirectangular · 360°"
                     : manifest?.environment?.projection === "equirectangular"
                       ? "Equirectangular · 360°"
                       : "Source mosaic context"}
                 </dd>
               </div>
+              {sceneClass === "completed-context" && (
+                <>
+                  <div><dt>Evidence</dt><dd>{captureSummary}</dd></div>
+                  <div><dt>Observed</dt><dd>{observedPercent}%</dd></div>
+                  <div>
+                    <dt>Registration</dt>
+                    <dd>{activeProvenance?.registration === "unregistered" ? "Views unregistered" : "Procedural layout"}</dd>
+                  </div>
+                  <div>
+                    <dt>Completion</dt>
+                    <dd>
+                      {activeProvenance?.completion === "provider"
+                        ? "Configured provider"
+                        : activeProvenance?.completion === "procedural-local"
+                          ? "Local procedural completion"
+                          : "Deterministic local fill"}
+                    </dd>
+                  </div>
+                  <div><dt>Geometry</dt><dd>Non-metric bounded context</dd></div>
+                </>
+              )}
               <div>
-                <dt>{sceneOrigin === "spz" ? "Renderer" : "Proxy points"}</dt>
-                <dd>{sceneOrigin === "spz" ? "Spark 2.1 · local decode" : manifest?.point_count.toLocaleString() ?? "108,656"}</dd>
+                <dt>{sceneOrigin === "spz" || sceneOrigin === "completed" ? "Renderer" : "Proxy points"}</dt>
+                <dd>
+                  {sceneOrigin === "spz"
+                    ? "Spark 2.1 · local decode"
+                    : sceneOrigin === "completed"
+                      ? "Three.js · 4K context sphere"
+                      : manifest?.point_count.toLocaleString() ?? "108,656"}
+                </dd>
               </div>
             </dl>
-            {sceneOrigin !== "spz" && (
-              <label className="inspector-toggle">
-                <span><strong>Observed context</strong><small>Prevents unsupported black regions</small></span>
-                <input type="checkbox" checked={contextEnabled} onChange={() => setContextEnabled((enabled) => !enabled)} />
-              </label>
-            )}
             <label>
               <span>Exposure <output>{(exposure / 100).toFixed(2)}×</output></span>
               <input aria-label="Exposure" type="range" min="70" max="130" value={exposure} onChange={(event) => setExposure(Number(event.target.value))} />
@@ -1179,7 +2144,7 @@ export function SceneStudio() {
           </aside>
         )}
 
-        {dropActive && <div className="capture-drop"><strong>Drop capture media or a trained SPZ/SOG</strong><span>SPZ/SOG opens locally. Images and videos require the configured reconstruction worker.</span></div>}
+        {dropActive && <div className="capture-drop"><strong>Drop images, video, or a trained SPZ/SOG</strong><span>Media becomes an on-device bounded preview with explicit completion labels. SPZ/SOG opens as trained Gaussian data.</span></div>}
         {progress < 100 && <div className="capture-progress"><span>Opening spatial record</span><b>{progress}%</b><i><em style={{ width: `${progress}%` }} /></i></div>}
         <div className="stage-notice" role="status" aria-live="polite">{notice}</div>
       </section>

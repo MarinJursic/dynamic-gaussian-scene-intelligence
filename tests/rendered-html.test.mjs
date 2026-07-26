@@ -12,17 +12,18 @@ async function render() {
   );
 }
 
-test("server renders the Spatial Capture Room application shell", async () => {
+test("server renders the Spatial Forge application shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Spatial Capture Room — Photographic Context &amp; 3DGS<\/title>/i);
+  assert.match(html, /<title>Spatial Forge — Image-to-World Studio<\/title>/i);
   assert.match(html, /Spatial/);
-  assert.match(html, /Capture Room/);
+  assert.match(html, /Spatial Forge/);
   assert.match(html, /Built-in spatial example/);
-  assert.match(html, /Open capture/);
+  assert.match(html, /Create world/);
   assert.match(html, /AWS kitchen SOG/);
+  assert.match(html, /Layered capture demo/);
   assert.match(html, /aria-label="Interactive spatial scene"/);
   assert.match(html, /aria-describedby="camera-instructions"/);
   assert.match(html, /aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D"/);
@@ -40,6 +41,8 @@ test("server renders the Spatial Capture Room application shell", async () => {
   assert.match(html, /Observed source/);
   assert.match(html, /ESO source/);
   assert.match(html, /Scene details/);
+  assert.match(html, /Procedural world route/);
+  assert.match(html, /Approach doorway/);
   assert.match(html, /prefers-color-scheme: light/);
   assert.doesNotMatch(html, /starter-preview|Your site is taking shape|react-loading-skeleton/i);
 });

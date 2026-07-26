@@ -8,19 +8,19 @@ const imageUrl = new URL(`${basePath}/og.png`, metadataBase).toString();
 
 export const metadata: Metadata = {
   metadataBase,
-  title: "Spatial Capture Room — Photographic Context & 3DGS",
+  title: "Spatial Forge — Image-to-World Studio",
   description:
-    "Review real 360° capture context, inspect reconstruction coverage, and open trained SPZ/SOG Gaussian scenes locally.",
+    "Turn images and videos into an explicitly bounded spatial preview, generate beyond doorways, and inspect trained SPZ/SOG Gaussian scenes.",
   icons: { icon: `${basePath}/favicon.png`, shortcut: `${basePath}/favicon.png` },
   openGraph: {
-    title: "Spatial Capture Room — Photographic Context & 3DGS",
-    description: "Observed room capture, trained interior examples, and local SPZ/SOG inspection.",
-    images: [{ url: imageUrl, width: 1672, height: 941, alt: "Spatial Capture Room viewer" }],
+    title: "Spatial Forge — Image-to-World Studio",
+    description: "Observed capture, labeled context completion, doorway expansion, and trained Gaussian inspection.",
+    images: [{ url: imageUrl, width: 1672, height: 941, alt: "Spatial Forge image-to-world viewer" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Spatial Capture Room — Photographic Context & 3DGS",
-    description: "Observed room capture, trained interior examples, and local SPZ/SOG inspection.",
+    title: "Spatial Forge — Image-to-World Studio",
+    description: "Observed capture, labeled context completion, doorway expansion, and trained Gaussian inspection.",
     images: [imageUrl],
   },
 };
