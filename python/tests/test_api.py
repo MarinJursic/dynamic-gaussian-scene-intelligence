@@ -42,7 +42,7 @@ def test_image_sequence_upload() -> None:
     assert body["point_count"] > 5400
     assert body["source"]["image_count"] == 3
     assert body["source"]["video_count"] == 0
-    assert body["spatial"]["navigable"] is True
+    assert body["spatial"]["navigable"] is False
     assert body["scene_url"].endswith("/manifest.json")
     scene_path = "/" + body["scene_url"].split("/", 3)[-1]
     manifest_response = client.get(scene_path)
@@ -74,7 +74,7 @@ def test_mixed_image_and_video_upload_builds_one_scene() -> None:
     scene_path = "/" + body["scene_url"].split("/", 3)[-1]
     manifest = client.get(scene_path).json()
     assert manifest["camera_path"]
-    assert manifest["spatial"]["navigable"] is True
+    assert manifest["spatial"]["navigable"] is False
 
 
 def test_rejects_unsupported_corrupt_and_empty_uploads() -> None:

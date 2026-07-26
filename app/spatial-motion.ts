@@ -18,3 +18,14 @@ export function lookAroundYaw(progress: number) {
 export function shortestAngleDelta(from: number, to: number) {
   return Math.atan2(Math.sin(to - from), Math.cos(to - from));
 }
+
+export function dampedCameraValue(
+  current: number,
+  target: number,
+  response: number,
+  deltaSeconds: number,
+) {
+  if (![current, target, response, deltaSeconds].every(Number.isFinite)) return target;
+  if (response <= 0 || deltaSeconds <= 0) return current;
+  return current + (target - current) * (1 - Math.exp(-response * deltaSeconds));
+}

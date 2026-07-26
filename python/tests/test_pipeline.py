@@ -23,7 +23,7 @@ def test_sample_ingestion_is_deterministic(tmp_path: Path) -> None:
     assert manifest["point_count"] > 960
     assert manifest["source"]["image_count"] == 4
     assert manifest["source"]["video_count"] == 0
-    assert manifest["spatial"]["navigable"] is True
+    assert manifest["spatial"]["navigable"] is False
     assert manifest["spatial"]["layout"] == "shared-camera-space"
     assert len(manifest["camera_path"]) == 4
     assert manifest["provenance"]["deterministic"] is True
@@ -74,7 +74,7 @@ def test_unrelated_inputs_use_gallery_fallback(tmp_path: Path) -> None:
     manifest = ingest_capture(capture, tmp_path / "scene", points_per_frame=30)
     assert manifest["quality"]["reconstruction_mode"] == "gallery-fallback"
     assert manifest["spatial"]["layout"] == "circular-gallery"
-    assert manifest["spatial"]["navigable"] is True
+    assert manifest["spatial"]["navigable"] is False
     assert len(manifest["camera_path"]) == 3
     assert any("unrelated" in warning for warning in manifest["quality"]["warnings"])
 
@@ -118,7 +118,7 @@ def test_video_ingestion_extracts_real_frames(tmp_path: Path) -> None:
     assert manifest["point_count"] > manifest["source"]["frame_count"] * 30
 
 
-def test_mixed_images_and_multiple_videos_build_one_navigable_space(
+def test_mixed_images_and_multiple_videos_build_one_review_proxy(
     tmp_path: Path,
 ) -> None:
     image = tmp_path / "anchor.png"
@@ -137,7 +137,7 @@ def test_mixed_images_and_multiple_videos_build_one_navigable_space(
     assert manifest["source"]["file_count"] == 3
     assert manifest["source"]["frame_count"] == 5
     assert manifest["point_count"] > 5 * 32
-    assert manifest["spatial"]["navigable"] is True
+    assert manifest["spatial"]["navigable"] is False
     assert len(manifest["camera_path"]) == 5
     extent = np.subtract(
         manifest["spatial"]["navigable_bounds"]["max"],

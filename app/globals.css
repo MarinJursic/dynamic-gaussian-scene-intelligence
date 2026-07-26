@@ -76,10 +76,16 @@ button {
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible,
 .spatial-stage:focus-visible {
   outline: 2px solid var(--violet);
   outline-offset: 3px;
+}
+
+.spatial-stage:focus-visible {
+  outline-color: #fff;
+  outline-offset: -3px;
 }
 
 .visually-hidden {
@@ -105,7 +111,7 @@ a:focus-visible,
 .capture-header {
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(190px, 0.72fr) minmax(380px, 1.6fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(210px, 0.7fr) minmax(280px, 1.5fr) minmax(220px, 0.75fr);
   align-items: center;
   border-bottom: 1px solid var(--line);
   background: var(--glass-deep);
@@ -137,67 +143,34 @@ a:focus-visible,
   letter-spacing: 0.11em;
 }
 
-.pipeline-stepper {
+.scene-picker {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(16px, 3vw, 46px);
+  gap: 10px;
   padding: 0 24px;
 }
 
-.pipeline-stepper span {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 7px;
+.scene-picker > span,
+.scene-picker > i {
   color: var(--muted);
-  font: 600 9px/1 var(--mono);
-  letter-spacing: 0.06em;
+  font: 600 8px/1 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.pipeline-stepper span:not(:last-child)::after {
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 9px);
-  width: clamp(8px, 2vw, 36px);
-  height: 1px;
-  background: var(--line);
-  content: "";
-}
-
-.pipeline-stepper i {
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
+.scene-picker select {
+  min-width: 210px;
+  min-height: 36px;
+  padding: 0 34px 0 13px;
   border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  color: var(--muted);
-  font-style: normal;
-  font-size: 8px;
-}
-
-.pipeline-stepper .complete {
-  color: var(--paper);
-}
-
-.pipeline-stepper .complete i {
-  border-color: color-mix(in srgb, var(--violet) 55%, transparent);
-  background: color-mix(in srgb, var(--violet) 18%, transparent);
-  color: var(--violet);
-}
-
-.pipeline-stepper .current {
-  color: var(--violet);
-}
-
-.pipeline-stepper .current i {
-  border-color: var(--violet);
-  background: var(--violet);
-  color: #16121e;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--violet) 13%, transparent);
+  border-radius: 999px;
+  background: var(--ghost);
+  color: var(--ink);
+  font: 620 10px/1 var(--sans);
 }
 
 .capture-actions {
@@ -213,6 +186,7 @@ a:focus-visible,
 .capture-actions button,
 .view-modes button,
 .camera-tools button,
+.camera-constraint,
 .inspector-trigger,
 .exposure-presets button {
   border: 1px solid var(--line);
@@ -228,18 +202,6 @@ a:focus-visible,
   border-radius: 999px;
   font-size: 10px;
   font-weight: 650;
-  letter-spacing: 0.03em;
-}
-
-.capture-actions select {
-  min-height: 36px;
-  max-width: 164px;
-  padding: 0 28px 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--ghost);
-  color: var(--paper-soft);
-  font: 650 10px/1 var(--sans);
   letter-spacing: 0.03em;
 }
 
@@ -307,7 +269,7 @@ a:focus-visible,
   top: clamp(22px, 4vh, 48px);
   left: clamp(20px, 3.5vw, 58px);
   z-index: 3;
-  max-width: min(560px, 58vw);
+  max-width: min(460px, 50vw);
   pointer-events: none;
   color: #fff;
   text-shadow: 0 2px 28px rgba(0, 0, 0, 0.45);
@@ -322,10 +284,10 @@ a:focus-visible,
 
 .scene-heading h1 {
   margin: 0;
-  font-size: clamp(24px, 3.7vw, 55px);
-  font-weight: 430;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  font-size: clamp(23px, 3vw, 44px);
+  font-weight: 470;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 
 .classification {
@@ -453,6 +415,26 @@ a:focus-visible,
   color: rgba(255, 255, 255, 0.7);
   font: 600 9px/1 var(--mono);
   backdrop-filter: blur(14px);
+}
+
+.camera-tools button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.camera-constraint {
+  min-width: 78px;
+  min-height: 37px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 11px;
+  border-color: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+  background: rgba(10, 10, 9, 0.68);
+  color: rgba(255, 255, 255, 0.7);
+  font: 600 9px/1 var(--mono);
+  backdrop-filter: blur(14px);
+  cursor: default;
 }
 
 .camera-tools button.active {
@@ -955,21 +937,9 @@ a:focus-visible,
     grid-template-columns: 190px 1fr 230px;
   }
 
-  .pipeline-stepper {
-    gap: 15px;
-  }
-
-  .pipeline-stepper span {
-    font-size: 0;
-  }
-
-  .pipeline-stepper span i {
-    font-size: 8px;
-  }
-
-  .pipeline-stepper span:not(:last-child)::after {
-    left: calc(100% + 7px);
-    width: 11px;
+  .scene-picker > span,
+  .scene-picker > i {
+    display: none;
   }
 
   .capture-filmstrip {
@@ -987,48 +957,56 @@ a:focus-visible,
 
 @media (max-width: 760px) {
   .capture-room {
-    min-height: 520px;
-    grid-template-rows: 58px minmax(0, 1fr) auto;
+    min-height: 540px;
+    grid-template-rows: 64px minmax(0, 1fr) auto;
   }
 
   .capture-header {
-    grid-template-columns: minmax(138px, 1fr) auto;
+    grid-template-columns: auto minmax(112px, 1fr) auto;
   }
 
   .capture-brand {
-    padding: 0 14px;
-    border-right: 0;
+    padding: 0 10px;
+  }
+
+  .capture-brand span {
+    margin: 0;
+    font-size: 8px;
+    letter-spacing: 0.14em;
   }
 
   .capture-brand strong {
-    font-size: 12px;
-  }
-
-  .pipeline-stepper {
     display: none;
   }
 
+  .scene-picker {
+    min-width: 0;
+    padding: 0 6px;
+  }
+
+  .scene-picker select {
+    width: 100%;
+    min-width: 0;
+    max-width: 154px;
+    min-height: 32px;
+    padding-left: 9px;
+    font-size: 9px;
+  }
+
   .capture-actions {
-    border-left: 0;
-    padding: 0 9px;
+    padding: 0 7px;
   }
 
   .capture-actions button {
-    min-height: 32px;
-    padding: 0 10px;
-    font-size: 9px;
-  }
-
-  .capture-actions select {
-    min-height: 32px;
-    max-width: 126px;
-    font-size: 9px;
+    min-height: 40px;
+    padding: 0 9px;
+    font-size: 8px;
   }
 
   .scene-heading {
     top: 18px;
     left: 16px;
-    max-width: calc(100vw - 32px);
+    max-width: calc(100vw - 126px);
   }
 
   .scene-heading p {
@@ -1036,12 +1014,12 @@ a:focus-visible,
   }
 
   .scene-heading h1 {
-    max-width: 70vw;
+    max-width: 100%;
     font-size: clamp(22px, 8vw, 34px);
   }
 
   .classification {
-    max-width: 76vw;
+    max-width: 100%;
   }
 
   .classification small {
@@ -1058,10 +1036,11 @@ a:focus-visible,
   }
 
   .scene-inspector {
-    top: 59px;
+    top: 62px;
     right: 0;
     bottom: 0;
     width: min(340px, 92vw);
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 
   .view-modes {
@@ -1074,6 +1053,7 @@ a:focus-visible,
 
   .view-modes button {
     flex: 1;
+    min-height: 41px;
     padding: 0 7px;
     font-size: 8px;
   }
@@ -1086,6 +1066,12 @@ a:focus-visible,
 
   .camera-tools button {
     flex: 1;
+    min-height: 41px;
+  }
+
+  .camera-constraint {
+    flex: 1;
+    min-height: 41px;
   }
 
   .stage-notice {
@@ -1135,6 +1121,54 @@ a:focus-visible,
 
   .filmstrip-track button {
     flex-basis: 142px;
+  }
+}
+
+@media (max-width: 430px) {
+  .capture-brand {
+    width: 58px;
+  }
+
+  .capture-brand span {
+    max-width: 44px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scene-picker select {
+    max-width: 130px;
+  }
+
+  .capture-actions {
+    gap: 4px;
+    padding: 0 5px;
+  }
+
+  .capture-actions button {
+    padding: 0 7px;
+  }
+
+  .scene-heading {
+    max-width: calc(100vw - 118px);
+  }
+
+  .scene-heading h1 {
+    font-size: clamp(19px, 7vw, 29px);
+  }
+
+  .classification {
+    margin-top: 10px;
+    padding: 8px 10px;
+  }
+
+  .stage-notice {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-height: 560px) {
+  body {
+    overflow-y: auto;
   }
 }
 

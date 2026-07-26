@@ -83,6 +83,14 @@ test("validates and decodes the complete DGSI v1 contract", () => {
   assert.deepEqual(Array.from(decoded.positions), [0, 1, 2, 3, 4, 5]);
 });
 
+test("accepts an explicitly non-navigable review proxy", () => {
+  const checked = validateManifest({
+    ...manifest,
+    spatial: { ...manifest.spatial, navigable: false },
+  });
+  assert.equal(checked.spatial.navigable, false);
+});
+
 test("rejects manifest/binary disagreement and malformed progressive chunks", () => {
   const badCount = validateManifest({ ...manifest, point_count: 3 });
   assert.throws(() => decodeDgsi(fixtureBinary(), badCount), /does not match/);

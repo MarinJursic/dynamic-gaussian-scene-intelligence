@@ -566,8 +566,8 @@ def ingest_captures(
                 else f"Unified Space · {len(source_paths)} Captures"
             ),
             "description": (
-                "Navigable CPU Gaussian-style spatial surrogate reconstructed "
-                "from all supplied images and videos."
+                "Non-metric CPU review proxy assembled from supplied media; "
+                "camera poses and trained 3D Gaussians were not solved."
             ),
             "source": source_summary,
             "point_count": int(len(points)),
@@ -589,7 +589,7 @@ def ingest_captures(
                     if report.reconstruction_mode == "gallery-fallback"
                     else "shared-camera-space"
                 ),
-                "navigable": True,
+                "navigable": False,
                 "floor_height": -1.62,
                 "navigable_bounds": {
                     "min": (bounds_min - navigation_margin).round(4).tolist(),

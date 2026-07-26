@@ -13,19 +13,24 @@ DGSI joins a TypeScript/Three.js review room with a Python capture pipeline. The
 
 [Open the full-resolution MP4](docs/walkthrough/app-walkthrough.mp4) · [Open the poster frame](docs/walkthrough/app-walkthrough-poster.jpg)
 
-The walkthrough is a single continuous interaction with the running application: real-photo source review, smooth room rotation, the bundled trained kitchen Gaussian, camera movement, light theme, and scene details. It is recorded from the app rather than assembled from concept images.
+The walkthrough is a single continuous interaction with the running application:
+it opens inside the real 8K room, follows the smooth automated look-around, changes
+to the bundled trained kitchen Gaussian, continues the camera sweep at full-splat
+detail, and switches theme. It is recorded from the app rather than assembled from
+concept images.
 
 ## What opens by default
 
 The included example is the **ESO Guesthouse living room in Vitacura, Chile**, photographed by the European Southern Observatory and published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-- The archived 6144×3072 equirectangular derivative supplies real, fully surrounding photographic context; the viewer uses a 4096×2048 WebGL-safe derivative to avoid device texture-limit failures.
+- The repository keeps a 6144×3072 archival derivative and two viewer derivatives. Capable desktop GPUs receive an 8192×4096 texture; constrained devices receive the 4096×2048 fallback after checking the WebGL texture limit.
 - Twelve 1280×820 rectilinear source directions drive the filmstrip and source-match view.
-- The environment sphere remains present outside Inspect mode, so rotating or walking never reveals a black void.
+- The environment sphere remains present outside Point proxy mode, so rotating or walking never reveals a black void.
+- The official source is a true 360°×180° photograph, and the camera can look to within one degree of both zenith and nadir.
 - Movement is limited to a declared safe hull because a single-center panorama does not recover metric translation or parallax.
-- Inspect mode exposes a deterministic CPU point proxy generated from those same real source views.
+- Point proxy mode exposes a deterministic CPU inspection representation generated from those same real source views.
 
-[Capture context](public/captures/eso-guesthouse/context.jpg) · [WebGL viewer derivative](public/captures/eso-guesthouse/context-webgl.jpg) · [Scene manifest](public/room-demo/manifest.json) · [CPU proxy PLY](public/room-demo/scene.ply) · [Attribution and transformations](THIRD_PARTY_NOTICES.md)
+[Capture context](public/captures/eso-guesthouse/context.jpg) · [8K viewer derivative](public/captures/eso-guesthouse/context-8k.jpg) · [4K compatibility derivative](public/captures/eso-guesthouse/context-webgl.jpg) · [Scene manifest](public/room-demo/manifest.json) · [CPU proxy PLY](public/room-demo/scene.ply) · [Attribution and transformations](THIRD_PARTY_NOTICES.md)
 
 The interface always states which representation is active:
 
@@ -39,34 +44,56 @@ This distinction is deliberate. The repository does not present a panorama or po
 
 ## Included spatial examples
 
-The example selector provides three materially different, locally bundled records:
+The example selector provides two materially different, locally bundled records:
 
 | Example | Representation | Purpose |
 |---|---|---|
-| **ESO photo room** | 4096×2048 observed 360° context + CPU proxy | Full-surround room review with no uncovered black viewport |
+| **ESO photo room** | Adaptive 8192×4096 / 4096×2048 observed 360° context + CPU proxy | Full-surround room review with no uncovered black viewport |
 | **AWS kitchen SOG** | Trained anisotropic Gaussian interior | High-fidelity, movable 3DGS/SOG renderer proof |
-| **AWS Venetian Hall SOG** | Trained panorama-derived Gaussian hall | A second real architectural capture with different geometry and lighting |
 
-The trained samples come from AWS’s MIT-0 [Open Source 3D Reconstruction Toolbox for Gaussian Splats](https://github.com/aws-solutions-library-samples/guidance-for-open-source-3d-reconstruction-toolbox-for-gaussian-splats-on-aws), where they are published as representative outputs of the full media → SfM → Gaussian-training pipeline. [Attribution and local asset details](THIRD_PARTY_NOTICES.md).
+The trained sample comes from AWS’s MIT-0 [Open Source 3D Reconstruction Toolbox for Gaussian Splats](https://github.com/aws-solutions-library-samples/guidance-for-open-source-3d-reconstruction-toolbox-for-gaussian-splats-on-aws), where it is published as a representative output of the full media → SfM → Gaussian-training pipeline. [Attribution and local asset details](THIRD_PARTY_NOTICES.md).
 
 ## Interaction model
 
 - In the ESO photographic room, drag to look in every direction and use the wheel or
   **Walk** controls to move inside the bounded capture hull.
-- In trained or imported Gaussian scenes, drag and wheel orbit a camera target fitted
-  from the scene bounds; WASD movement remains scale-aware.
-- The ESO **Tour** follows a centripetal path using arc-length sampling and
-  quaternion-smoothed orientation.
-- **360°** performs one continuous revolution around the active representation rather
-  than cutting between viewpoints.
+- The bundled trained kitchen opens at its checked first-person origin with a small,
+  manually curated movement hull. Drag looks around, the wheel moves along the view
+  direction, and WASD movement is scale-aware and bounded.
+- User-imported Gaussian files open at a conservative origin with rotation enabled.
+  Translation stays locked because SPZ/SOG files do not standardize a registered
+  safe camera hull; the interface states this constraint instead of inventing one.
+- **Auto look** performs one continuous 14-second revolution from the current heading,
+  with no cut at the start or end.
 - **Source match** compares any of the twelve real source directions with the active view.
 - **Coverage** shows registered source directions and the navigation boundary.
-- **Inspect** reveals the CPU point proxy or the currently imported Gaussian scene.
-- **Scene details** controls context visibility, rendering budget, exposure, and exposure presets.
-- **Add capture / splat** accepts trained `.spz` or `.sog` files locally; image and video batches are forwarded to the configured Python worker and the returned scene is loaded into the viewer.
+- **Point proxy** reveals the CPU inspection representation only for photographic and generated captures; trained Gaussian scenes do not expose a duplicate view mode.
+- **Scene details** controls context visibility, exposure, and exposure presets.
+- **Open capture** accepts trained `.spz` or `.sog` files locally; image and video batches are forwarded to the configured Python worker and the returned scene is loaded into the viewer.
 - Light and dark themes persist across sessions and preserve full control contrast.
 
 All mode buttons, camera controls, exposure presets, source thumbnails, inspector controls, drag-and-drop handling, and theme switching are functional.
+
+### Rendering fidelity
+
+The renderer follows Spark’s current guidance rather than applying conventional
+post-processing to splats:
+
+- WebGL MSAA remains disabled because it does not improve Gaussian footprints and
+  adds substantial cost.
+- radial sorting is explicit and sorting is allowed every frame, which keeps the
+  visible set stable during rapid viewpoint rotation;
+- depth-of-field and both Spark blur terms are disabled;
+- a modest focal adjustment sharpens projected splats without changing the source data;
+- the bundled 358k SOG interior renders its complete splat set. Adaptive
+  LoD is reserved for user imports above 1.5 million splats;
+- pointer input maps directly to the rendered camera during a drag, while keyboard
+  look uses frame-rate-independent damping and reduced-motion preferences disable
+  automatic camera movement; and
+- the canvas renders at up to 2× device pixel ratio.
+
+These choices improve stability and clarity; they cannot reconstruct geometry that
+was never observed by the source cameras.
 
 ## Architecture
 
@@ -110,19 +137,22 @@ DGSI_SCENE_ROOT="$PWD/runtime-scenes" \
   .venv/bin/uvicorn dgsi.api:app --host 127.0.0.1 --port 8016
 ```
 
-The hosted ESO room, two trained AWS examples, and local `.spz` / `.sog` import work without the Python process. Image/video upload requires the worker on port `8016`; set `NEXT_PUBLIC_DGSI_API_URL` to use another endpoint and configure `DGSI_ALLOWED_ORIGINS` when serving it cross-origin.
+The hosted ESO room, trained AWS kitchen example, and local `.spz` / `.sog` import
+work without the Python process. Image/video upload requires the worker on port
+`8016`; set `NEXT_PUBLIC_DGSI_API_URL` to use another endpoint and configure
+`DGSI_ALLOWED_ORIGINS` when serving it cross-origin.
 
 ## Capture and import paths
 
 ### Open a trained Gaussian scene
 
-Choose **Add capture / splat**, select a `.spz` or `.sog`, or drop it directly onto the room. The file is decoded in the browser and is not uploaded. Spark reads the trained representation, derives a camera fit from its bounds, and switches the classification to **Imported anisotropic Gaussian** without retaining unrelated ESO attribution or imagery.
+Choose **Open capture**, select a `.spz` or `.sog`, or drop it directly onto the room. The file is decoded in the browser and is not uploaded. Spark reads the trained representation, derives a camera fit from its bounds, and switches the classification to **Imported anisotropic Gaussian** without retaining unrelated ESO attribution or imagery.
 
 SPZ is the recommended browser format because it preserves Gaussian position, anisotropic scale, rotation, opacity, color, and spherical-harmonic data in a compact package. See the [SPZ reference implementation](https://github.com/nianticlabs/spz).
 
 ### Process multiple images or videos
 
-The picker and drop surface accept several images, several videos, or a mixed batch. The Python worker:
+The picker and drop surface accept several images, several videos, or a mixed batch. The Python worker creates a non-metric review proxy; without solved camera poses it intentionally disables translation. It:
 
 1. extracts a balanced frame allocation across all sources;
 2. measures resolution, sharpness, exposure, duplication, and relatedness;
@@ -179,10 +209,10 @@ The browser-side contracts specifically check:
 
 - continuous, clamped tour progress and one-revolution 360° motion;
 - safe-hull translation limits;
-- real archived 6144×3072 context, WebGL-safe 4096×2048 viewer derivative, and twelve-source manifest;
+- real archived 6144×3072 context, adaptive 8192×4096 and 4096×2048 viewer derivatives, and twelve-source manifest;
 - separate photographic, CPU-proxy, and trained-Gaussian classifications;
-- Spark initialization, native `.spz` / `.sog` loading, and bound-derived camera fit;
-- arc-length path sampling and quaternion interpolation;
+- Spark initialization, stable radial sorting, zero blur, native `.spz` / `.sog` loading, and an inside-the-bounds camera fit;
+- continuous camera damping and a cut-free auto-look revolution;
 - persistent light-theme support and accessible controls.
 
 ## Accuracy and failure modes
@@ -198,6 +228,7 @@ The browser-side contracts specifically check:
 
 - Kerbl et al., [3D Gaussian Splatting for Real-Time Radiance Field Rendering](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (SIGGRAPH 2023)
 - Spark, [Three.js 3D Gaussian Splatting renderer](https://github.com/sparkjsdev/spark)
+- Spark, [renderer parameters and sorting](https://sparkjs.dev/docs/spark-renderer/) and [performance guidance](https://sparkjs.dev/docs/performance/)
 - Niantic Spatial, [SPZ compressed Gaussian format](https://github.com/nianticlabs/spz)
 - COLMAP, [Structure-from-Motion tutorial](https://colmap.github.io/tutorial)
 - nerfstudio, [Splatfacto documentation](https://docs.nerf.studio/nerfology/methods/splat.html)

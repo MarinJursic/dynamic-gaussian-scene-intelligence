@@ -161,7 +161,7 @@ export function validateManifest(value: unknown): SceneManifest {
     !["shared-camera-space", "circular-gallery", "single-center-360-context"].includes(
       manifest.spatial.layout,
     ) ||
-    manifest.spatial.navigable !== true ||
+    typeof manifest.spatial.navigable !== "boolean" ||
     !Number.isFinite(manifest.spatial.floor_height) ||
     !isFiniteVector(manifest.spatial.navigable_bounds?.min) ||
     !isFiniteVector(manifest.spatial.navigable_bounds?.max) ||
