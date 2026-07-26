@@ -4,6 +4,10 @@
 
 [![Live preview](https://img.shields.io/badge/live-preview-6f52d9?logo=github)](https://marinjursic.github.io/SpatialForge/)
 [![Preview status](https://github.com/MarinJursic/SpatialForge/actions/workflows/pages.yml/badge.svg)](https://github.com/MarinJursic/SpatialForge/actions/workflows/pages.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-16-111714?logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-35%20passing-176BCA)](#verification)
 
 Spatial Forge turns one or more local images or videos into an immediately
 explorable, full-surround **spatial preview**. Observed imagery remains visually
@@ -30,10 +34,11 @@ interface still labels those pixels as provider-completed rather than observed.
 [Open the full-resolution MP4](docs/walkthrough/app-walkthrough.mp4) · [Open the poster frame](docs/walkthrough/app-walkthrough-poster.jpg)
 
 The checked-in walkthrough is a single continuous interaction with the running application:
-it opens inside the real 8K room, follows the smooth automated look-around, changes
-to the bundled trained kitchen Gaussian, continues the camera sweep at full-splat
-detail, and switches theme. It is recorded from the app rather than assembled from
-concept images.
+it opens the seamless layered room, demonstrates bounded walking and a smooth
+automated look-around, returns to the real 8K ESO room, blocks an unmapped
+doorway, completes all four generation stages, enters the photorealistic bundled
+Room 02 continuation, returns to Room 01, and switches theme. It is recorded
+from the app rather than assembled from concept images.
 
 ## From source image to bounded world
 
