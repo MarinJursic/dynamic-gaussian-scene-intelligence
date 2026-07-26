@@ -5,11 +5,22 @@
 [![Live preview](https://img.shields.io/badge/live-preview-2ea44f?logo=github)](https://marinjursic.github.io/dynamic-gaussian-scene-intelligence/)
 [![Preview status](https://github.com/MarinJursic/dynamic-gaussian-scene-intelligence/actions/workflows/pages.yml/badge.svg)](https://github.com/MarinJursic/dynamic-gaussian-scene-intelligence/actions/workflows/pages.yml)
 
-![DGSI product visual](docs/scene-intelligence-card.png)
-
 DGSI is a portfolio-grade, local-first MVP spanning a TypeScript/Three.js viewer and a real Python ingestion service. It accepts **multiple images, multiple videos, or both in one batch**; extracts and balances frames across every source; inspects capture quality; creates a deterministic room-scale CPU reconstruction surrogate; and packages the result as a compact browser scene plus PLY.
 
 > **Accuracy contract:** the included CPU path is an inspectable point/gaussian *surrogate*, not trained 3D Gaussian Splatting. It exists so every clone can run the full input → package → browser loop without CUDA, credentials, models, or downloads. The production path is documented separately and should use recovered camera poses plus Gaussian optimization with COLMAP and nerfstudio/gsplat.
+
+## Continuous app walkthrough
+
+[![Continuous app walkthrough: 12 source views, filled 360 room, and in-space navigation](docs/walkthrough/app-walkthrough.gif)](docs/walkthrough/app-walkthrough.mp4)
+
+[Watch or download the full-resolution MP4](docs/walkthrough/app-walkthrough.mp4) · [Open the poster frame](docs/walkthrough/app-walkthrough-poster.jpg)
+
+This is one continuous capture of the running application. It starts with all
+**12 overlapping source views**, transitions into the source-grounded, filled
+**360° room**, and then enters **Explore space** for direct in-space navigation.
+The room remains visually filled as the camera moves—there is no black void—and
+the walkthrough finishes in the rendered-room view, not the raw-splat inspection
+view. Splat inspection remains available separately as an engineering tool.
 
 ## Room capture → completed navigable space
 
@@ -20,15 +31,11 @@ completion layer.
 
 [Room manifest](public/room-demo/manifest.json) · [Room PLY](public/room-demo/scene.ply) · [Source panorama](examples/room-panorama/living-room-panorama.png)
 
-The old contact sheet, image-cut walkthrough, raw-splat screenshot, and legacy demo
-GIF are intentionally no longer embedded. Below the lead image, this README now
-accepts only a literal, continuous capture of the running application.
-
 The viewer opens in **Rendered room** mode. The source-grounded 360° layer fills the
 entire field of view, so camera motion never exposes a black void. Raw reconstruction
 points are hidden by default and remain available through **Splat inspection** for
-engineering analysis. The automated walkthrough uses a centripetal Catmull–Rom
-camera path with eased FOV interpolation instead of cuts between still frames.
+engineering analysis. A centripetal Catmull–Rom camera path with eased FOV
+interpolation is available alongside direct walk navigation.
 
 Click **⌖** to enter Explore space. WASD or the arrow keys move through the bounded
 volume, Q/E changes height, dragging looks around, the wheel moves forward/back, and
@@ -313,7 +320,7 @@ examples/sample-capture.mp4 real video input for smoke testing
 examples/room-panorama/    coherent room source panorama
 examples/room-capture/     twelve overlapping perspective views
 scripts/make-room-capture.sh reproducible FFmpeg view derivation
-docs/                      README media
+docs/walkthrough/          continuous GIF, full-resolution MP4, and poster
 ```
 
 Built for local evaluation. No credentials, hardware, CUDA, or external service is required.
