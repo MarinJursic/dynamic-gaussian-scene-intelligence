@@ -12,27 +12,34 @@ async function render() {
   );
 }
 
-test("server renders the DGSI application shell", async () => {
+test("server renders the Spatial Capture Room application shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>DGSI — Dynamic Gaussian Scene Intelligence<\/title>/i);
-  assert.match(html, /SCENE INTELLIGENCE/);
-  assert.match(html, /SEMANTIC LAYERS/);
-  assert.match(html, /CHANGE INTELLIGENCE/);
-  assert.match(html, /Import images \+ videos/);
+  assert.match(html, /<title>Spatial Capture Room — Photographic Context &amp; 3DGS<\/title>/i);
+  assert.match(html, /Spatial/);
+  assert.match(html, /Capture Room/);
+  assert.match(html, /Capture/);
+  assert.match(html, /Register/);
+  assert.match(html, /Optimize/);
+  assert.match(html, /Publish/);
+  assert.match(html, /Add capture \/ splat/);
+  assert.match(html, /AWS kitchen SOG/);
+  assert.match(html, /AWS Venetian Hall SOG/);
   assert.match(html, /aria-label="Interactive reconstructed scene"/);
-  assert.match(html, /aria-label="Rendering budget"/);
-  assert.match(html, /Hide selected class|Whole scene/);
-  assert.match(html, /Walk through space/);
-  assert.match(html, /Switch color theme/);
-  assert.match(html, /INPUT VIEWS/);
-  assert.match(html, /Living-room source view 00/);
-  assert.match(html, /Toggle completed environment/);
-  assert.match(html, /Toggle rendered room and splat inspection/);
-  assert.match(html, /RENDERED ROOM/);
-  assert.match(html, /Preparing 360° context/);
+  assert.match(html, /360° photographic capture/);
+  assert.match(html, /not trained 3DGS/);
+  assert.match(html, /Source match/);
+  assert.match(html, /Coverage/);
+  assert.match(html, /Inspect/);
+  assert.match(html, /Walk/);
+  assert.match(html, /Tour/);
+  assert.match(html, /360°/);
+  assert.match(html, /Reset/);
+  assert.match(html, /Observed source/);
+  assert.match(html, /ESO source/);
+  assert.match(html, /Scene details/);
   assert.match(html, /prefers-color-scheme: light/);
   assert.doesNotMatch(html, /starter-preview|Your site is taking shape|react-loading-skeleton/i);
 });

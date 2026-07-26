@@ -28,7 +28,7 @@ export type SceneManifest = {
   timeline: { duration_seconds: number; comparison_label: string };
   coordinate_system?: { units: string; metric_scale_known: boolean };
   spatial: {
-    layout: "shared-camera-space" | "circular-gallery";
+    layout: "shared-camera-space" | "circular-gallery" | "single-center-360-context";
     navigable: boolean;
     floor_height: number;
     navigable_bounds: {
@@ -158,7 +158,9 @@ export function validateManifest(value: unknown): SceneManifest {
   }
   if (
     !manifest.spatial ||
-    !["shared-camera-space", "circular-gallery"].includes(manifest.spatial.layout) ||
+    !["shared-camera-space", "circular-gallery", "single-center-360-context"].includes(
+      manifest.spatial.layout,
+    ) ||
     manifest.spatial.navigable !== true ||
     !Number.isFinite(manifest.spatial.floor_height) ||
     !isFiniteVector(manifest.spatial.navigable_bounds?.min) ||

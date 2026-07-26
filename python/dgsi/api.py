@@ -16,6 +16,20 @@ SCENE_ROOT = Path(os.getenv("DGSI_SCENE_ROOT", "runtime-scenes")).resolve()
 MAX_UPLOAD_BYTES = int(os.getenv("DGSI_MAX_UPLOAD_BYTES", str(256 * 1024 * 1024)))
 MAX_UPLOAD_FILES = int(os.getenv("DGSI_MAX_UPLOAD_FILES", "32"))
 MAX_BATCH_BYTES = int(os.getenv("DGSI_MAX_BATCH_BYTES", str(1024 * 1024 * 1024)))
+DEFAULT_ORIGINS = (
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:3001,http://127.0.0.1:3001,"
+    "http://localhost:3106,http://127.0.0.1:3106"
+)
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DGSI_ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",")
+    if origin.strip()
+]
+ALLOWED_ORIGIN_REGEX = os.getenv(
+    "DGSI_ALLOWED_ORIGIN_REGEX",
+    r"https://(?:[a-z0-9-]+\.)?(?:github\.io|openai\.site)$",
+)
 SCENE_ROOT.mkdir(parents=True, exist_ok=True)
 app = FastAPI(
     title="DGSI Ingestion API",
@@ -24,12 +38,8 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

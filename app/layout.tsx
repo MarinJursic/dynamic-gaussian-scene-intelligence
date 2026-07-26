@@ -8,19 +8,19 @@ const imageUrl = new URL(`${basePath}/og.png`, metadataBase).toString();
 
 export const metadata: Metadata = {
   metadataBase,
-  title: "DGSI — Dynamic Gaussian Scene Intelligence",
+  title: "Spatial Capture Room — Photographic Context & 3DGS",
   description:
-    "Inspect, compare, stream, measure, and understand reconstructed spatial scenes.",
+    "Review real 360° capture context, inspect reconstruction coverage, and open trained SPZ/SOG Gaussian scenes locally.",
   icons: { icon: `${basePath}/favicon.png`, shortcut: `${basePath}/favicon.png` },
   openGraph: {
-    title: "DGSI — Dynamic Gaussian Scene Intelligence",
-    description: "Inspect. Compare. Understand.",
-    images: [{ url: imageUrl, width: 1672, height: 941, alt: "DGSI spatial scene intelligence viewer" }],
+    title: "Spatial Capture Room — Photographic Context & 3DGS",
+    description: "Observed room capture, trained interior examples, and local SPZ/SOG inspection.",
+    images: [{ url: imageUrl, width: 1672, height: 941, alt: "Spatial Capture Room viewer" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "DGSI — Dynamic Gaussian Scene Intelligence",
-    description: "Inspect. Compare. Understand.",
+    title: "Spatial Capture Room — Photographic Context & 3DGS",
+    description: "Observed room capture, trained interior examples, and local SPZ/SOG inspection.",
     images: [imageUrl],
   },
 };

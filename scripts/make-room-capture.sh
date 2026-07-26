@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_image="${1:-examples/room-panorama/living-room-panorama.png}"
-output_dir="${2:-examples/room-capture}"
+source_image="${1:-public/captures/eso-guesthouse/context.jpg}"
+output_dir="${2:-public/room-inputs}"
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "ffmpeg is required to derive the room capture views." >&2
@@ -24,7 +24,8 @@ for index in "${!yaws[@]}"; do
     -i "$source_image" \
     -vf "v360=input=equirect:output=flat:yaw=${yaws[$index]}:pitch=-2:h_fov=105:v_fov=74:w=960:h=640" \
     -frames:v 1 \
-    "$output_dir/room-$(printf '%02d' "$index").png"
+    -q:v 2 \
+    "$output_dir/room-$(printf '%02d' "$index").jpg"
 done
 
 echo "Created ${#yaws[@]} overlapping room views in $output_dir"

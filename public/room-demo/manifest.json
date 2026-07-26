@@ -1,7 +1,7 @@
 {
   "schema": "dgsi.scene/v1",
-  "title": "Room Capture",
-  "description": "Navigable CPU Gaussian-style spatial surrogate reconstructed from all supplied images and videos.",
+  "title": "ESO Guesthouse · 360 Capture",
+  "description": "Observed ESO 360 panorama with a deterministic CPU inspection proxy. The hosted scene is not a trained 3D Gaussian Splat.",
   "source": {
     "kind": "images",
     "frame_count": 12,
@@ -9,18 +9,18 @@
     "image_count": 12,
     "video_count": 0,
     "asset_names": [
-      "room-00.png",
-      "room-01.png",
-      "room-02.png",
-      "room-03.png",
-      "room-04.png",
-      "room-05.png",
-      "room-06.png",
-      "room-07.png",
-      "room-08.png",
-      "room-09.png",
-      "room-10.png",
-      "room-11.png"
+      "room-00.jpg",
+      "room-01.jpg",
+      "room-02.jpg",
+      "room-03.jpg",
+      "room-04.jpg",
+      "room-05.jpg",
+      "room-06.jpg",
+      "room-07.jpg",
+      "room-08.jpg",
+      "room-09.jpg",
+      "room-10.jpg",
+      "room-11.jpg"
     ],
     "video_frame_counts": []
   },
@@ -32,14 +32,14 @@
     "url": "environment.jpg",
     "projection": "equirectangular",
     "fill_strategy": "source-panorama",
-    "generated": true,
-    "coverage": 1.0
+    "generated": false,
+    "coverage": 1
   },
   "progressive_chunks": [
     0.18,
     0.42,
     0.7,
-    1.0
+    1
   ],
   "bounds": {
     "min": [
@@ -82,52 +82,52 @@
   ],
   "timeline": {
     "duration_seconds": 12,
-    "comparison_label": "Week 12 \u2192 Week 18"
+    "comparison_label": "Week 12 → Week 18"
   },
   "coordinate_system": {
     "units": "scene-units",
     "metric_scale_known": false
   },
   "spatial": {
-    "layout": "shared-camera-space",
+    "layout": "single-center-360-context",
     "navigable": true,
     "floor_height": -1.62,
     "navigable_bounds": {
       "min": [
-        -5.177800178527832,
-        -1.8700000047683716,
-        -5.058000087738037
+        -0.42,
+        -0.18,
+        -0.54
       ],
       "max": [
-        5.177800178527832,
-        1.840000033378601,
-        5.058000087738037
+        0.42,
+        0.18,
+        0.24
       ]
     },
     "entry_pose": {
       "position": [
-        0.0,
-        0.0,
-        0.7799999713897705
+        0,
+        0,
+        0
       ],
       "target": [
-        0.0,
-        0.0,
-        -1.6200000047683716
+        0,
+        0,
+        -1
       ]
     }
   },
   "camera_path": [
     {
-      "time": 0.0,
+      "time": 0,
       "position": [
-        0.0,
-        0.0,
+        0,
+        0,
         0.7799999713897705
       ],
       "target": [
-        0.0,
-        0.0,
+        0,
+        0,
         -1.6200000047683716
       ],
       "fov": 58
@@ -164,13 +164,13 @@
       "time": 0.27273,
       "position": [
         0.7799999713897705,
-        0.0,
-        0.0
+        0,
+        0
       ],
       "target": [
         -1.6200000047683716,
-        0.0,
-        -0.0
+        0,
+        0
       ],
       "fov": 58
     },
@@ -205,13 +205,13 @@
     {
       "time": 0.54545,
       "position": [
-        0.0,
-        -0.0,
+        0,
+        0,
         -0.7799999713897705
       ],
       "target": [
-        -0.0,
-        -0.0,
+        0,
+        0,
         1.6200000047683716
       ],
       "fov": 58
@@ -248,13 +248,13 @@
       "time": 0.81818,
       "position": [
         -0.7799999713897705,
-        0.0,
-        -0.0
+        0,
+        0
       ],
       "target": [
         1.6200000047683716,
-        0.0,
-        0.0
+        0,
+        0
       ],
       "fov": 58
     },
@@ -273,7 +273,7 @@
       "fov": 58
     },
     {
-      "time": 1.0,
+      "time": 1,
       "position": [
         -0.38999998569488525,
         -0.06930000334978104,
@@ -289,99 +289,106 @@
   ],
   "quality": {
     "status": "ready",
-    "median_relatedness": 0.865,
+    "median_relatedness": 0.765,
     "frames": [
       {
-        "file": "room-00.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 279.83,
-        "exposure": 0.386
+        "file": "room-00.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 484.17,
+        "exposure": 0.587
       },
       {
-        "file": "room-01.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 241.29,
-        "exposure": 0.306
+        "file": "room-01.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 416.65,
+        "exposure": 0.513
       },
       {
-        "file": "room-02.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 247.43,
-        "exposure": 0.339
+        "file": "room-02.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 396.88,
+        "exposure": 0.502
       },
       {
-        "file": "room-03.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 202.34,
-        "exposure": 0.338
+        "file": "room-03.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 244.92,
+        "exposure": 0.406
       },
       {
-        "file": "room-04.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 175.12,
-        "exposure": 0.413
+        "file": "room-04.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 236.08,
+        "exposure": 0.444
       },
       {
-        "file": "room-05.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 163.0,
-        "exposure": 0.453
+        "file": "room-05.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 227.61,
+        "exposure": 0.422
       },
       {
-        "file": "room-06.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 171.33,
-        "exposure": 0.507
+        "file": "room-06.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 144.35,
+        "exposure": 0.441
       },
       {
-        "file": "room-07.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 238.58,
-        "exposure": 0.507
+        "file": "room-07.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 135.89,
+        "exposure": 0.456
       },
       {
-        "file": "room-08.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 296.96,
-        "exposure": 0.542
+        "file": "room-08.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 85.72,
+        "exposure": 0.443
       },
       {
-        "file": "room-09.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 349.76,
-        "exposure": 0.533
+        "file": "room-09.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 96.68,
+        "exposure": 0.435
       },
       {
-        "file": "room-10.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 275.89,
-        "exposure": 0.516
+        "file": "room-10.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 112.46,
+        "exposure": 0.451
       },
       {
-        "file": "room-11.png",
-        "width": 960,
-        "height": 640,
-        "sharpness": 277.89,
-        "exposure": 0.497
+        "file": "room-11.jpg",
+        "width": 1280,
+        "height": 820,
+        "sharpness": 249.81,
+        "exposure": 0.506
       }
     ],
-    "warnings": [],
-    "reconstruction_mode": "surrogate-reconstruction"
+    "warnings": [
+      "The hosted scene is a photographic context projection, not optimized 3DGS.",
+      "Import a trained SPZ to inspect anisotropic scales, rotations, opacity, and spherical harmonics."
+    ],
+    "reconstruction_mode": "panorama-context-with-cpu-proxy"
   },
   "provenance": {
     "pipeline": "dgsi-cpu-surrogate/0.1.0",
     "deterministic": true,
-    "production_gaussian_optimized": false
+    "production_gaussian_optimized": false,
+    "source_title": "Guesthouse living room (gh-livingroom-pan)",
+    "source_author": "European Southern Observatory",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Guesthouse_living_room_(gh-livingroom-pan).jpg",
+    "source_license": "CC BY 4.0"
   }
 }

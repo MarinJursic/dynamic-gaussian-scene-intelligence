@@ -20,6 +20,15 @@ def test_health() -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_configured_viewer_origin_receives_cors_headers() -> None:
+    response = TestClient(app).get(
+        "/health",
+        headers={"Origin": "http://localhost:3106"},
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3106"
+
+
 def test_image_sequence_upload() -> None:
     client = TestClient(app)
     files = [
