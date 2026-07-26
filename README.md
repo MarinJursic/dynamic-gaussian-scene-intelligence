@@ -51,9 +51,9 @@ concept images.
 6. At the threshold, the next room is blocked until **Generate beyond doorway**
    completes its four explicit stages.
 7. Choose **Enter Room 02** to stream the completed continuation into a new bounded
-   navigation cell. The local fallback is a structurally distinct procedural
-   gallery/corridor with architectural wall, floor, ceiling, doorway, and lighting
-   cues—no mirrored Room 01 photographs. **Return to Room 01** restores its own
+   navigation cell. The offline demo uses a clearly labeled, bundled generated
+   gallery/corridor that is structurally distinct from Room 01—no mirrored source
+   photographs or collage panels. **Return to Room 01** restores its own
    independent evidence record and layered geometry.
 
 This workflow is intentionally not described as single-image 3DGS reconstruction.
@@ -287,11 +287,14 @@ The browser-side contracts specifically check:
 
 - A single 360° photograph provides complete rotational context, but it does not recover parallax, occluded geometry, collision meshes, or metric translation.
 - A perspective image or video frame provides even less spatial evidence. The
-  on-device full-surround result and layered room planes provide perceptual
+  on-device full-surround result and architectural depth cues provide perceptual
   parallax, not recovered depth, metric geometry, collision, or a trained radiance
   field.
 - Doorway continuation generates another bounded context cell. It does not prove
   that a physical room exists beyond the photographed threshold.
+- The bundled Room 02 panorama is a generated demonstration fixture, not an
+  observation of the real building. Its role and transformation are recorded in
+  [`public/captures/generated/README.md`](public/captures/generated/README.md).
 - Provider-completed directions can be visually plausible while remaining
   inconsistent across viewpoints. The interface preserves their provenance and
   never mixes them into the observed percentage.

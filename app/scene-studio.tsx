@@ -277,7 +277,7 @@ async function completedPanoramaFromMedia(files: File[]) {
   }
 }
 
-async function continuationFromPanorama() {
+async function fallbackContinuationFromCanvas() {
   const canvas = document.createElement("canvas");
   canvas.width = 4096;
   canvas.height = 2048;
@@ -345,6 +345,17 @@ async function continuationFromPanorama() {
     canvas.toBlob((result) => result ? resolve(result) : reject(new Error("Continuation completion failed")), "image/jpeg", 0.91),
   );
   return URL.createObjectURL(blob);
+}
+
+async function continuationFromPanorama() {
+  const bundledContinuation =
+    `${PUBLIC_BASE_PATH}/captures/generated/room-02-ai-continuation.jpg`;
+  try {
+    await loadImageElement(bundledContinuation);
+    return bundledContinuation;
+  } catch {
+    return fallbackContinuationFromCanvas();
+  }
 }
 
 function updateLookCamera(runtime: Runtime) {
@@ -487,7 +498,7 @@ export function SceneStudio() {
           : providerUsed
           ? "Provider-completed context"
           : isProcedural
-            ? "Local procedural completion"
+            ? "Bundled generated completion"
             : "Deterministic completed context",
         detail: isRegisteredLayered
           ? "Observed 360° context · restrained non-metric architectural depth"
@@ -1564,7 +1575,7 @@ export function SceneStudio() {
         room: 2,
         sourceLabel: continuationProvider
           ? "Configured doorway-completion provider"
-          : "Local procedural gallery continuation",
+          : "Bundled generated gallery continuation",
         renderedCaptures: 0,
         uniqueCaptures: 0,
         observedPercent: 0,
@@ -1575,7 +1586,7 @@ export function SceneStudio() {
       setPortalPhase((phase) => nextPortalPhase(phase, "finish"));
       setNotice(continuationProvider
         ? "Room 02 is ready · provider-completed context · bounded"
-        : "Room 02 is ready · structurally distinct local procedural completion · bounded");
+        : "Room 02 is ready · bundled generated corridor preview · bounded");
     } catch (error) {
       setPortalPhase("threshold");
       setNotice(error instanceof Error ? error.message : "The next room could not be generated");
@@ -1606,7 +1617,7 @@ export function SceneStudio() {
       setCaptureSummary(room2?.sourceLabel ?? "doorway-conditioned procedural continuation");
       setActiveRoom(roomAfterPortalAction(activeRoom, "enter", portalPhase));
       setPortalGateOpen(false);
-      setNotice(room2 ? roomProvenanceLabel(room2) : "Room 02 · local procedural completion · 0% observed");
+      setNotice(room2 ? roomProvenanceLabel(room2) : "Room 02 · bundled generated completion · 0% observed");
       window.requestAnimationFrame(() => stageRef.current?.focus({ preventScroll: true }));
     } finally {
       setIngesting(false);
@@ -1882,7 +1893,7 @@ export function SceneStudio() {
               {activeProvenance.registration === "unregistered"
                 ? "Pose unknown · depth cues provide perceptual parallax, not measured depth"
                 : activeProvenance.registration === "procedural"
-                  ? "Structurally generated continuation · not observed"
+                  ? "Bundled generated panorama · not observed"
                   : "Source-grounded 360° context · limited translation"}
             </small>
           </aside>
@@ -2172,7 +2183,7 @@ export function SceneStudio() {
                       {activeProvenance?.completion === "provider"
                         ? "Configured provider"
                         : activeProvenance?.completion === "procedural-local"
-                          ? "Local procedural completion"
+                          ? "Bundled generated completion"
                           : "Deterministic local fill"}
                     </dd>
                   </div>

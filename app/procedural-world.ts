@@ -75,7 +75,7 @@ export function roomProvenanceLabel(room: RoomProvenance) {
     return `Room ${String(room.room).padStart(2, "0")} · registered 360° source`;
   }
   if (room.registration === "procedural") {
-    return `Room ${String(room.room).padStart(2, "0")} · local procedural completion · 0% observed`;
+    return `Room ${String(room.room).padStart(2, "0")} · bundled generated completion · 0% observed`;
   }
   return `Room ${String(room.room).padStart(2, "0")} · ${room.uniqueCaptures}/${room.renderedCaptures} unique rendered captures · unregistered`;
 }

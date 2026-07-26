@@ -41,7 +41,7 @@ test("registered panoramas and procedural rooms have independent provenance", ()
       registration: "procedural",
       completion: "procedural-local",
     }),
-    "Room 02 · local procedural completion · 0% observed",
+    "Room 02 · bundled generated completion · 0% observed",
   );
 });
 

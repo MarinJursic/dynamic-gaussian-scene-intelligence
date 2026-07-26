@@ -41,6 +41,12 @@ test("hosted scene is a high-resolution real-photo context with explicit provena
   );
   assert.deepEqual(jpegDimensions(highResolutionContext), { width: 8192, height: 4096 });
 
+  const generatedContinuation = await readFile(
+    new URL("public/captures/generated/room-02-ai-continuation.jpg", root),
+  );
+  assert.deepEqual(jpegDimensions(generatedContinuation), { width: 2048, height: 1024 });
+  assert.ok(generatedContinuation.byteLength > 250_000);
+
   const manifest = JSON.parse(await text("public/room-demo/manifest.json"));
   assert.equal(manifest.environment.generated, false);
   assert.equal(manifest.source.image_count, 12);
@@ -95,6 +101,7 @@ test("viewer contract distinguishes photographic context, proxy points, and true
   assert.match(source, /new THREE\.BoxGeometry/);
   assert.match(source, /globalCompositeOperation = "destination-in"/);
   assert.match(source, /Room 02 is a fully procedural corridor/);
+  assert.match(source, /captures\/generated\/room-02-ai-continuation\.jpg/);
   assert.match(source, /scene-loading-cover/);
   assert.doesNotMatch(source, /blur\(72px\)/);
   assert.match(source, /roomLayerUrlsRef/);
