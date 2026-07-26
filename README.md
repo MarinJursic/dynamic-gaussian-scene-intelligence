@@ -15,10 +15,9 @@ Gaussian scales, rotations, opacity, and spherical harmonics through
 
 The built-in completion path is deterministic and runs on-device. It builds a
 4K equirectangular context from image/video frames, completes unsupported
-directions without black regions, and places source-driven foreground depth
-elements plus restrained architectural posts inside that background. The photographic layers use
-alpha-feathered edges and stay outside the primary sightline, producing limited
-motion parallax without rectangular collage seams. The stage remains behind a
+directions without black regions, and places restrained architectural depth
+cues inside that background. These geometric cues produce limited motion parallax
+without floating photographic cards or rectangular collage seams. The stage remains behind a
 solid loading surface until both the context and depth elements are ready.
 Everything remains labeled as **non-metric local fill**.
 An optional provider seam can supply model-generated panoramas, but the
@@ -43,7 +42,7 @@ concept images.
    across each video.
 3. The observed frames are arranged inside a complete 4096×2048 environment while
    unsupported directions receive deterministic context fill. Up to eight rendered
-   captures also texture small alpha-feathered foreground depth cards.
+   captures also inform restrained architectural depth cues.
 4. A perceptual signature collapses repeated rendered captures. The scene record
    reports rendered/unique counts, a conservative source-footprint percentage,
    completion method, unknown-pose registration state, and non-metric geometry.
@@ -96,7 +95,7 @@ The example selector provides three materially different, locally bundled record
 | Example | Representation | Purpose |
 |---|---|---|
 | **ESO photo room** | Adaptive 8192×4096 / 4096×2048 observed 360° context + CPU proxy | Full-surround room review with no uncovered black viewport |
-| **Layered capture demo** | Eight rendered directions + deterministic context + six textured depth planes | Immediate, visibly parallaxed non-metric upload-path demonstration |
+| **Layered capture demo** | Registered panorama + deterministic context + restrained architectural depth cues | Immediate, visibly parallaxed non-metric upload-path demonstration |
 | **AWS kitchen SOG** | Trained anisotropic Gaussian interior | High-fidelity, movable 3DGS/SOG renderer proof |
 
 The trained sample comes from AWS’s MIT-0 [Open Source 3D Reconstruction Toolbox for Gaussian Splats](https://github.com/aws-solutions-library-samples/guidance-for-open-source-3d-reconstruction-toolbox-for-gaussian-splats-on-aws), where it is published as a representative output of the full media → SfM → Gaussian-training pipeline. [Attribution and local asset details](THIRD_PARTY_NOTICES.md).
@@ -226,8 +225,8 @@ batch. The default browser path:
    captures, and collapses repeated visual evidence;
 5. reports unknown-pose images as **unregistered**, never as trustworthy angular
    coverage;
-6. textures small non-metric foreground depth elements to provide perceptible
-   bounded parallax in front of the no-void context sphere without wall-sized seams;
+6. adds restrained non-metric architectural depth cues to provide perceptible
+   bounded parallax in front of the no-void context sphere without photo-card seams;
 7. keeps every completion and doorway-generated room explicitly labeled non-metric.
 
 The optional Python worker still creates deterministic DGSI/PLY inspection

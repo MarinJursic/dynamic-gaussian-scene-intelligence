@@ -483,14 +483,14 @@ export function SceneStudio() {
       const isRegisteredLayered = activeProvenance?.registration === "registered-panorama";
       return {
         label: isRegisteredLayered
-          ? "Registered panorama + depth layers"
+          ? "Registered panorama + bounded depth cues"
           : providerUsed
           ? "Provider-completed context"
           : isProcedural
             ? "Local procedural completion"
             : "Deterministic completed context",
         detail: isRegisteredLayered
-          ? "Observed 360° context · feathered non-metric parallax layers"
+          ? "Observed 360° context · restrained non-metric architectural depth"
           : completionDisclosure(
             observedPercent,
             providerUsed,
@@ -1012,13 +1012,11 @@ export function SceneStudio() {
       runtime.proceduralWorld.add(mesh);
     };
     if (variant === 1) {
-      // Small feathered depth cards preserve a coherent photographic background.
-      // They produce measurable screen-space parallax without presenting a
-      // rectangular wall collage as recovered geometry.
-      addPlane(textures[0], 0.24, 0.46, [-0.72, -0.31, -0.95], [0, 0.14, 0], 0.72);
-      addPlane(textures[1], 0.23, 0.44, [0.74, -0.32, -1.02], [0, -0.14, 0], 0.7);
-      addPost([0.03, 0.78, 0.03], [-0.82, -0.26, -1.12], "#5d4939", 0.46);
-      addPost([0.03, 0.74, 0.03], [0.84, -0.28, -1.2], "#5d4939", 0.44);
+      // Restrained architectural depth cues create screen-space parallax without
+      // floating photographic cards or implying recovered metric geometry.
+      addPost([0.035, 0.82, 0.035], [-0.88, -0.24, -1.2], "#5d4939", 0.4);
+      addPost([0.035, 0.78, 0.035], [0.9, -0.26, -1.28], "#5d4939", 0.38);
+      addPost([1.84, 0.025, 0.025], [0, -0.64, -1.18], "#806c5b", 0.34);
     } else {
       // Room 02 is a fully procedural corridor. Geometry echoes the rendered
       // doorway frame without reusing or mirroring Room 01 photographs.
@@ -1371,7 +1369,7 @@ export function SceneStudio() {
     );
     const coverage = evidence.observedPercent;
     const summary = options.registered
-      ? "Registered source panorama · non-metric depth layers"
+      ? "Registered source panorama · bounded non-metric depth cues"
       : `${evidence.unique}/${evidence.rendered} unique rendered captures` +
         `${capture.videoFrameCount ? ` · ${capture.videoFrameCount} sampled video frames` : ""} · views unregistered`;
     const provenance: RoomProvenance = {
@@ -1429,7 +1427,7 @@ export function SceneStudio() {
     setProviderUsed(usedProvider);
     setProgress(100);
     setNotice(options.registered
-      ? "Registered panorama ready · feathered non-metric depth layers · bounded parallax"
+      ? "Registered panorama ready · restrained architectural depth · bounded parallax"
       : completionDisclosure(coverage, usedProvider, "unregistered"));
   };
 
@@ -1906,7 +1904,7 @@ export function SceneStudio() {
             <strong>{roomProvenanceLabel(activeProvenance)}</strong>
             <small>
               {activeProvenance.registration === "unregistered"
-                ? "Pose unknown · layers provide perceptual parallax, not measured depth"
+                ? "Pose unknown · depth cues provide perceptual parallax, not measured depth"
                 : activeProvenance.registration === "procedural"
                   ? "Structurally generated continuation · not observed"
                   : "Source-grounded 360° context · limited translation"}
