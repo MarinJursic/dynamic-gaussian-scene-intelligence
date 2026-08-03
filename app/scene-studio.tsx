@@ -1768,9 +1768,9 @@ export function SceneStudio() {
         </p>
       )}
       <header className="capture-header">
-        <a className="capture-brand" href="#studio" aria-label="Spatial Forge home">
+        <a className="capture-brand" href="#studio" aria-label="Scene Reconstruction home">
           <span>Image to world</span>
-          <strong>Spatial Forge</strong>
+          <strong>Scene Reconstruction</strong>
         </a>
         <div className="scene-picker">
           <span>Scene</span>
@@ -1844,7 +1844,7 @@ export function SceneStudio() {
         <div ref={mountRef} className="spatial-canvas" />
         {(ingesting || progress < 100) && (
           <div className="scene-loading-cover" role="status" aria-live="polite">
-            <span>Spatial Forge</span>
+            <span>Scene Reconstruction</span>
             <strong>{ingesting ? "Preparing coherent room geometry" : "Loading photographic context"}</strong>
             <small>{Math.max(0, progress)}% ready</small>
             <i><em style={{ width: `${Math.max(3, progress)}%` }} /></i>

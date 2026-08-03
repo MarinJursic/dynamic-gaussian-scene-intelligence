@@ -1,15 +1,15 @@
-# Spatial Forge
+# Scene Reconstruction
 
 **A local-first image-to-world studio for bounded spatial previews, explicit scene completion, doorway expansion, and trained 3D Gaussian scenes.**
 
-[![Live preview](https://img.shields.io/badge/live-preview-6f52d9?logo=github)](https://marinjursic.github.io/SpatialForge/)
-[![Preview status](https://github.com/MarinJursic/SpatialForge/actions/workflows/pages.yml/badge.svg)](https://github.com/MarinJursic/SpatialForge/actions/workflows/pages.yml)
+[![Live preview](https://img.shields.io/badge/live-preview-6f52d9?logo=github)](https://marinjursic.github.io/SceneReconstruction/)
+[![Preview status](https://github.com/MarinJursic/SceneReconstruction/actions/workflows/pages.yml/badge.svg)](https://github.com/MarinJursic/SceneReconstruction/actions/workflows/pages.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111714?logo=nextdotjs)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-35%20passing-176BCA)](#verification)
 
-Spatial Forge turns one or more local images or videos into an immediately
+Scene Reconstruction turns one or more local images or videos into an immediately
 explorable, full-surround **spatial preview**. Observed imagery remains visually
 and textually distinct from completed directions, movement stays inside a bounded
 cell, and unmapped doorways must be generated before the viewer can cross them.
@@ -29,7 +29,7 @@ interface still labels those pixels as provider-completed rather than observed.
 
 ## Continuous application walkthrough
 
-[![Continuous walkthrough of the running Spatial Forge app](docs/walkthrough/app-walkthrough.gif)](docs/walkthrough/app-walkthrough.mp4)
+[![Continuous walkthrough of the running Scene Reconstruction app](docs/walkthrough/app-walkthrough.gif)](docs/walkthrough/app-walkthrough.mp4)
 
 [Open the full-resolution MP4](docs/walkthrough/app-walkthrough.mp4) · [Open the poster frame](docs/walkthrough/app-walkthrough-poster.jpg)
 
@@ -43,7 +43,7 @@ from the app rather than assembled from concept images.
 ## From source image to bounded world
 
 1. Choose **Create world** and select one or more images, videos, or a mixed batch.
-2. Spatial Forge decodes each image and samples three or four meaningful positions
+2. Scene Reconstruction decodes each image and samples three or four meaningful positions
    across each video.
 3. The observed frames are arranged inside a complete 4096×2048 environment while
    unsupported directions receive deterministic context fill. Up to eight rendered
@@ -205,7 +205,7 @@ To use a real image-completion service, set
 - `POST /continue` with `{ "panorama_url": "…", "doorway": "forward" }`,
   returning another `panorama_url`.
 
-If the provider is absent or `/complete` fails, Spatial Forge automatically uses
+If the provider is absent or `/complete` fails, Scene Reconstruction automatically uses
 the deterministic on-device fill. Provider output is disclosed as
 **provider-completed context**, not measured scene evidence.
 
@@ -326,7 +326,7 @@ The browser-side contracts specifically check:
 ## Repository map
 
 ```text
-app/                         Spatial Forge, completion logic, doorway state, camera runtime
+app/                         Scene Reconstruction, completion logic, doorway state, camera runtime
 python/dgsi/                 Ingestion library, CLI, and API
 python/tests/                Deterministic pipeline and API tests
 public/captures/             Licensed real-photo capture derivatives

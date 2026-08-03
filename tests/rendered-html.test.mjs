@@ -12,14 +12,14 @@ async function render() {
   );
 }
 
-test("server renders the Spatial Forge application shell", async () => {
+test("server renders the Scene Reconstruction application shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Spatial Forge — Image-to-World Studio<\/title>/i);
+  assert.match(html, /<title>Scene Reconstruction — Image-to-World Studio<\/title>/i);
   assert.match(html, /Spatial/);
-  assert.match(html, /Spatial Forge/);
+  assert.match(html, /Scene Reconstruction/);
   assert.match(html, /Built-in spatial example/);
   assert.match(html, /Create world/);
   assert.match(html, /AWS kitchen SOG/);

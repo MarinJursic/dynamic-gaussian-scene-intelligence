@@ -8,18 +8,18 @@ const imageUrl = new URL(`${basePath}/og.png`, metadataBase).toString();
 
 export const metadata: Metadata = {
   metadataBase,
-  title: "Spatial Forge — Image-to-World Studio",
+  title: "Scene Reconstruction — Image-to-World Studio",
   description:
     "Turn images and videos into an explicitly bounded spatial preview, generate beyond doorways, and inspect trained SPZ/SOG Gaussian scenes.",
   icons: { icon: `${basePath}/favicon.png`, shortcut: `${basePath}/favicon.png` },
   openGraph: {
-    title: "Spatial Forge — Image-to-World Studio",
+    title: "Scene Reconstruction — Image-to-World Studio",
     description: "Observed capture, labeled context completion, doorway expansion, and trained Gaussian inspection.",
-    images: [{ url: imageUrl, width: 1672, height: 941, alt: "Spatial Forge image-to-world viewer" }],
+    images: [{ url: imageUrl, width: 1672, height: 941, alt: "Scene Reconstruction image-to-world viewer" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Spatial Forge — Image-to-World Studio",
+    title: "Scene Reconstruction — Image-to-World Studio",
     description: "Observed capture, labeled context completion, doorway expansion, and trained Gaussian inspection.",
     images: [imageUrl],
   },
